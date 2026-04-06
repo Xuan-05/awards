@@ -179,6 +179,26 @@ async function toggleUser(row: UserRow) {
   await loadUsers();
 }
 
+async function removeUser(row: UserRow) {
+  if (!canOperate(row)) {
+    ElMessage.warning("无权限操作系统管理员用户");
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      `确认删除用户「${row.realName}」吗？`,
+      "提示",
+      { type: "warning" },
+    );
+  } catch {
+    return;
+  }
+  const resp = await http.delete<ApiResponse<null>>(`/admin/users/${row.id}`);
+  if (resp.data.code !== 0) throw new Error(resp.data.message);
+  ElMessage.success("已删除");
+  await loadUsers();
+}
+
 async function resetPassword(row: UserRow) {
   if (!canOperate(row)) {
     ElMessage.warning("无权限操作系统管理员用户");
@@ -485,7 +505,7 @@ onMounted(async () => {
                 }}</span>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="280" fixed="right">
+            <el-table-column label="操作" width="320" fixed="right">
               <template #default="{ row }">
                 <div class="action-btns">
                   <el-button
@@ -518,6 +538,14 @@ onMounted(async () => {
                   >
                     {{ row.enabled === 1 ? "停用" : "启用" }}
                   </el-button>
+                  <el-button
+                    v-if="row.enabled === 0"
+                    size="small"
+                    type="danger"
+                    :disabled="!canOperate(row)"
+                    @click="removeUser(row)"
+                    >删除</el-button
+                  >
                 </div>
               </template>
             </el-table-column>

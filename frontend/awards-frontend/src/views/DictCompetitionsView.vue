@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '../api/http'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
@@ -138,6 +138,22 @@ async function toggle(row: Row) {
   await load()
 }
 
+async function remove(row: Row) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除竞赛「${row.competitionName}」吗？`,
+      '提示',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  const resp = await http.delete<ApiResponse<null>>(`/dicts/competitions/${row.id}`)
+  if (resp.data.code !== 0) throw new Error(resp.data.message)
+  ElMessage.success('已删除')
+  await load()
+}
+
 onMounted(async () => {
   await loadBase()
   await load()
@@ -243,12 +259,13 @@ onMounted(async () => {
               </template>
             </el-table-column>
             <el-table-column prop="sortNo" label="排序" width="70" />
-            <el-table-column label="操作" width="160" fixed="right">
+            <el-table-column label="操作" width="240" fixed="right">
               <template #default="{ row }">
-                <el-button size="small" text @click="openEdit(row)">编辑</el-button>
-                <el-button size="small" text :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
+                <el-button size="small" type="primary" plain @click="openEdit(row)">编辑</el-button>
+                <el-button size="small" type="warning" @click="toggle(row)">
                   {{ row.enabled === 1 ? '停用' : '启用' }}
                 </el-button>
+                <el-button v-if="row.enabled === 0" size="small" type="danger" @click="remove(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>

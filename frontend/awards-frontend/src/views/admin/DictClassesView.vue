@@ -110,6 +110,22 @@ async function toggle(row: ClassRow) {
   await load()
 }
 
+async function remove(row: ClassRow) {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除班级「${row.className}」吗？`,
+      '提示',
+      { type: 'warning' },
+    )
+  } catch {
+    return
+  }
+  const resp = await http.delete<ApiResponse<null>>(`/admin/classes/${row.id}`)
+  if (resp.data.code !== 0) throw new Error(resp.data.message)
+  ElMessage.success('已删除')
+  await load()
+}
+
 onMounted(async () => {
   await loadDepts()
   await load()
@@ -176,10 +192,11 @@ onMounted(async () => {
                 <el-tag :type="row.enabled === 1 ? 'success' : 'info'">{{ row.enabled === 1 ? '启用' : '停用' }}</el-tag>
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="220">
+            <el-table-column label="操作" width="240">
               <template #default="{ row }">
-                <el-button size="small" @click="openEdit(row)">编辑</el-button>
+                <el-button size="small" type="primary" plain @click="openEdit(row)">编辑</el-button>
                 <el-button size="small" type="warning" @click="toggle(row)">{{ row.enabled === 1 ? '停用' : '启用' }}</el-button>
+                <el-button v-if="row.enabled === 0" size="small" type="danger" @click="remove(row)">删除</el-button>
               </template>
             </el-table-column>
           </el-table>

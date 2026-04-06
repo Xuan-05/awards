@@ -261,7 +261,10 @@ async function onSubmit() {
 <style scoped>
 .login-page {
   min-height: 100vh;
+  overflow: hidden;
   display: flex;
+  position:relative;
+    align-items: center;
   background: var(--apple-bg);
 }
 
@@ -269,7 +272,12 @@ async function onSubmit() {
 .brand-section {
   flex: 1;
   display: none;
-  position: relative;
+  position: absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  z-index:1;
   background: linear-gradient(135deg, var(--apple-primary) 0%, #5856D6 50%, #AF52DE 100%);
   overflow: hidden;
   padding: 60px;
@@ -284,10 +292,16 @@ async function onSubmit() {
 }
 
 .brand-content {
-  position: relative;
+  position: absolute; 
   z-index: 1;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%); 
+  margin-left: -320px; 
+  height: 60%;
   color: white;
   max-width: 480px;
+
 }
 
 .brand-logo {
@@ -410,10 +424,16 @@ async function onSubmit() {
 .form-section {
   flex: 1;
   display: flex;
+  position:absolute;
+  top: 50%; transform: translateY(-50%);
+  right:40px;
+  height:60%;
+  z-index:10;
   align-items: center;
   justify-content: center;
   padding: 40px 24px;
   background: var(--apple-bg);
+  background: rgba(255, 255, 255, 1);
 }
 
 @media (min-width: 1024px) {

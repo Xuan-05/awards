@@ -76,63 +76,50 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
     </div>
 
     <!-- 统计卡片 -->
-    <div class="stats-grid" v-loading="loading">
-      <div class="stat-card teams">
-        <div class="stat-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <span class="stat-value">{{ summary?.teamCount ?? 0 }}</span>
-          <span class="stat-label">我的团队</span>
-        </div>
-      </div>
-
-      <div class="stat-card pending">
-        <div class="stat-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12,6 12,12 16,14" />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <span class="stat-value">{{ summary?.pendingAuditCount ?? 0 }}</span>
-          <span class="stat-label">待审核</span>
-        </div>
-      </div>
-
-      <div class="stat-card approved">
-        <div class="stat-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-            <polyline points="22,4 12,14.01 9,11.01" />
-          </svg>
-        </div>
-        <div class="stat-content">
-          <span class="stat-value">{{ summary?.approvedCount ?? 0 }}</span>
-          <span class="stat-label">已通过</span>
-        </div>
-      </div>
+<div class="stats-grid" v-loading="loading">
+  <div class="stat-card teams">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
     </div>
+    <div class="stat-content">
+      <!-- 文字 在上 -->
+      <span class="stat-label">我的团队</span>
+      <!-- 数字 在下 -->
+      <span class="stat-value">{{ summary?.teamCount ?? 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card pending">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12,6 12,12 16,14" />
+      </svg>
+    </div>
+    <div class="stat-content">
+      <span class="stat-label">待审核</span>
+      <span class="stat-value">{{ summary?.pendingAuditCount ?? 0 }}</span>
+    </div>
+  </div>
+
+  <div class="stat-card approved">
+    <div class="stat-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+        <polyline points="22,4 12,14.01 9,11.01" />
+      </svg>
+    </div>
+    <div class="stat-content">
+      <span class="stat-label">已通过</span>
+      <span class="stat-value">{{ summary?.approvedCount ?? 0 }}</span>
+    </div>
+  </div>
+</div>
 
     <!-- 待办事项 -->
     <div class="todos-section">
@@ -424,15 +411,14 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
+  gap: 20px; 
   margin-bottom: 24px;
 }
 
 .stat-card {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 20px;
+  position: relative;
+  padding: 24px 28px;
+  min-height: 100px;
   background: var(--apple-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -447,17 +433,20 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 50px;
+  height:50px;
+  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
+  position: absolute;
+  top: 18px;
+  right: 25px; 
 }
 
 .stat-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
 }
 
 .stat-card.teams .stat-icon {
@@ -475,22 +464,26 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
   color: var(--apple-success);
 }
 
-.stat-content {
-  display: flex;
-  flex-direction: column;
+
+
+.stat-label {
+  position:absolute;
+top:48px;
+right:110px;
+transform: translateY(-50%);
+  font-size: 24px;
+  font-weight: 540;
+  color: var(--apple-text-secondary);
+  white-space: nowrap;
 }
 
 .stat-value {
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 52px;
+  font-weight: 600;
   color: var(--apple-text);
-  line-height: 1;
-}
-
-.stat-label {
-  font-size: 13px;
-  color: var(--apple-text-secondary);
-  margin-top: 4px;
+  position: absolute;
+  left: 48px; 
+  bottom: 33px; 
 }
 
 /* Todos Section */
@@ -507,17 +500,21 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 
 .todos-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
 }
 
 .todo-card {
-  padding: 16px;
+  padding: 20px 14px;
+  min-height: 200px; /* 🔥 高度 > 宽度，竖长矩形 */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   background: var(--apple-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--apple-border);
-  border-radius: var(--apple-radius-lg);
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -536,8 +533,8 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 }
 
 .todo-icon {
-  width: 40px;
-  height: 40px;
+  width: 50px;
+  height: 50px;
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -545,8 +542,8 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 }
 
 .todo-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 30px;
+  height: 30px;
 }
 
 .todo-icon.messages {
@@ -580,18 +577,22 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 6px;
+    padding: 0 6px;
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  transform: none;
 }
 
 .todo-title {
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--apple-text);
-  margin: 0 0 4px 0;
+  margin:4px;
 }
 
 .todo-desc {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--apple-text-secondary);
   margin: 0 0 12px 0;
 }
@@ -603,6 +604,8 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
   font-size: 13px;
   color: var(--apple-primary);
   font-weight: 500;
+  margin-top: auto;
+  align-items: flex-start;
 }
 
 .todo-action svg {

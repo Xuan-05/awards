@@ -979,7 +979,11 @@ function triggerUpload() {
 }
 
 .form-section {
-  min-height: 300px;
+  min-height: 350px;
+width:600px;
+align-items: center;
+margin: 0 auto;
+
 }
 
 .section-title {
@@ -1277,11 +1281,13 @@ function triggerUpload() {
 /* Form Actions */
 .form-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 8px; 
   margin-top: 24px;
   padding-top: 24px;
   border-top: 1px solid var(--apple-border);
+
 }
 
 .action-btn {
@@ -1292,6 +1298,7 @@ function triggerUpload() {
   cursor: pointer;
   transition: all 0.15s;
   border: none;
+  
 }
 
 .action-btn.primary {

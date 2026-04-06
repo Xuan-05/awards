@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import AppHeader from '../components/layout/AppHeader.vue'
-import AppBreadcrumb from '../components/layout/AppBreadcrumb.vue'
 import AppSidebar, { type MenuItem } from '../components/layout/AppSidebar.vue'
 
 const menu: MenuItem[] = [
@@ -29,9 +28,6 @@ const menu: MenuItem[] = [
         <AppSidebar base-path="/admin" :items="menu" />
       </div>
       <div class="content">
-        <div class="crumb">
-          <AppBreadcrumb />
-        </div>
         <div class="page">
           <router-view />
         </div>
@@ -65,9 +61,7 @@ const menu: MenuItem[] = [
   flex-direction: column;
   padding: 0 20px 20px 20px;
 }
-.crumb {
-  padding: 12px 0 8px 0;
-}
+
 .page {
   flex: 1;
   min-height: 0;

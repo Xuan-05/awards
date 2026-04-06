@@ -291,9 +291,6 @@ onMounted(async () => {
           <polyline points="14,2 14,8 20,8"/>
         </svg>
         <p>暂无填报记录</p>
-        <button v-if="canCreate" class="empty-btn" @click="router.push('/app/records/new')">
-          创建第一条填报
-        </button>
       </div>
     </div>
 

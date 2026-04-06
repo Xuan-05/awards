@@ -371,8 +371,12 @@ onMounted(async () => {
   border: 1px solid var(--apple-border);
   border-radius: var(--apple-radius-lg);
   padding: 20px;
-}
 
+  width: 70%;
+  max-width: 800px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
 .shortcuts-title {
   font-size: 15px;
   font-weight: 600;
@@ -382,7 +386,7 @@ onMounted(async () => {
 
 .shortcuts-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(3, 1fr); 
   gap: 12px;
 }
 

@@ -4,6 +4,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { http } from '../../api/http'
 import { useUserStore } from '../../stores/user'
+import { labelRoleCode, labelUserType } from '../../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 
@@ -107,27 +108,6 @@ onMounted(load)
 const showOldPwd = ref(false)
 const showNewPwd = ref(false)
 
-// 获取用户类型标签
-function getUserTypeLabel(type?: string): string {
-  const map: Record<string, string> = {
-    STUDENT: '学生',
-    TEACHER: '教师',
-    ADMIN: '管理员',
-  }
-  return map[type || ''] || type || '-'
-}
-
-// 获取角色标签
-function getRoleLabel(role: string): string {
-  const map: Record<string, string> = {
-    STUDENT: '学生',
-    TEACHER: '教师',
-    TEAM_LEADER: '队长',
-    SCHOOL_ADMIN: '校级管理员',
-    SUPER_ADMIN: '超级管理员',
-  }
-  return map[role] || role
-}
 </script>
 
 <template>
@@ -143,10 +123,10 @@ function getRoleLabel(role: string): string {
         </div>
         <div class="profile-info">
           <h1 class="profile-name">{{ user.me?.realName || '用户' }}</h1>
-          <p class="profile-type">{{ getUserTypeLabel(user.me?.userType) }}</p>
+          <p class="profile-type">{{ labelUserType(user.me?.userType) }}</p>
           <div class="profile-badges">
             <span class="badge" v-for="role in user.me?.roles" :key="role">
-              {{ getRoleLabel(role) }}
+              {{ labelRoleCode(role) }}
             </span>
           </div>
         </div>
@@ -178,7 +158,7 @@ function getRoleLabel(role: string): string {
               </div>
               <div class="detail-content">
                 <span class="detail-label">用户类型</span>
-                <span class="detail-value">{{ getUserTypeLabel(user.me?.userType) }}</span>
+                <span class="detail-value">{{ labelUserType(user.me?.userType) }}</span>
               </div>
             </div>
 

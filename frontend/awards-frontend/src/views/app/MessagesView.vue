@@ -11,6 +11,7 @@ import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { http } from "../../api/http";
 import type { ApiResponse, PageResult } from "../../types/api";
+import { labelInviteStatus, labelInviteeType } from "../../utils/displayLabels";
 
 type MessageRow = {
   /** 消息ID（sys_message.id） */
@@ -186,7 +187,7 @@ async function handleInvitation(invId: number, action: "accept" | "reject") {
     `/team-invitations/${invId}/${action}`,
   );
   if (resp.data.code !== 0) throw new Error(resp.data.message);
-  ElMessage.success(action === "accept" ? "已接受邀请" : "已拒绝邀请");
+  ElMessage.success(action === "accept" ? "已加入团队" : "已拒绝邀请");
   // 处理邀请后：消息列表/未读数/邀请状态都可能变化，因此都刷新
   await Promise.all([load(), loadUnreadCount()]);
   await loadInvitation(invId);
@@ -253,15 +254,6 @@ function formatDateTime(dateStr?: string): string {
   return `${year}年${month}月${day}日 ${hour}:${minute}`;
 }
 
-// 邀请状态文本映射
-function invitationStatusText(status: string): string {
-  const map: Record<string, string> = {
-    PENDING: '等待处理',
-    ACCEPTED: '已接受',
-    REJECTED: '已拒绝',
-  };
-  return map[status] || status;
-}
 </script>
 
 <template>
@@ -571,7 +563,7 @@ function invitationStatusText(status: string): string {
                 <div class="info-row">
                   <span>邀请类型</span>
                   <span class="type-badge" :class="invitation.inviteeType.toLowerCase()">
-                    {{ invitation.inviteeType === 'MEMBER' ? '队员' : '指导教师' }}
+                    {{ labelInviteeType(invitation.inviteeType) }}
                   </span>
                 </div>
                 <div class="info-row">
@@ -580,7 +572,7 @@ function invitationStatusText(status: string): string {
                     class="status-badge"
                     :class="invitation.status.toLowerCase()"
                   >
-                    {{ invitationStatusText(invitation.status) }}
+                    {{ labelInviteStatus(invitation.status) }}
                   </span>
                 </div>
                 <div class="info-row">

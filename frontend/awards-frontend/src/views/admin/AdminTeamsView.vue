@@ -4,6 +4,7 @@ import { http } from "../../api/http"
 import { useUserStore } from "../../stores/user"
 import type { ApiResponse, PageResult } from "../../types/api"
 import type { Team, TeamMember, TeamTeacher } from "../../types/team"
+import { labelInviteStatus, labelTeamStatus, labelUserType } from "../../utils/displayLabels"
 
 type Dept = { id: number; deptCode: string; deptName: string; parentId?: number | null; enabled: number; sortNo: number }
 type DeptTreeNode = Dept & { children: DeptTreeNode[] }
@@ -179,13 +180,15 @@ onMounted(async () => {
         </div>
         <div class="user-table" v-loading="loading">
           <el-table :data="rows" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="id" label="编号" width="70" />
             <el-table-column prop="teamName" label="团队名称" min-width="140" />
             <el-table-column label="队长" width="100"><template #default="{ row }">{{ row.captainRealName || '-' }}</template></el-table-column>
             <el-table-column label="成员数" width="80"><template #default="{ row }">{{ row.memberCount }}</template></el-table-column>
             <el-table-column label="指导教师数" width="100"><template #default="{ row }">{{ row.teacherCount }}</template></el-table-column>
             <el-table-column label="院系" width="140"><template #default="{ row }">{{ deptNameById[row.ownerDeptId] || `ID:${row.ownerDeptId}` }}</template></el-table-column>
-            <el-table-column prop="status" label="状态" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">{{ labelTeamStatus(row.status) }}</template>
+            </el-table-column>
             <el-table-column label="创建时间" width="170"><template #default="{ row }">{{ formatDt(row.createdAt) }}</template></el-table-column>
             <el-table-column label="操作" width="100" fixed="right">
               <template #default="{ row }"><el-button size="small" text type="primary" @click="openDetail(row)">查看详情</el-button></template>
@@ -205,7 +208,7 @@ onMounted(async () => {
           <h3 class="detail-section-title">基本信息</h3>
           <el-descriptions :column="2" border>
             <el-descriptions-item label="团队名称">{{ detailTeam.teamName }}</el-descriptions-item>
-            <el-descriptions-item label="状态">{{ detailTeam.status }}</el-descriptions-item>
+            <el-descriptions-item label="状态">{{ labelTeamStatus(detailTeam.status) }}</el-descriptions-item>
             <el-descriptions-item label="队长用户ID">{{ detailTeam.captainUserId }}</el-descriptions-item>
             <el-descriptions-item label="归属院系">{{ deptNameById[detailTeam.ownerDeptId] || detailTeam.ownerDeptId }}</el-descriptions-item>
             <el-descriptions-item label="备注" :span="2">{{ detailTeam.remark || '-' }}</el-descriptions-item>
@@ -214,15 +217,19 @@ onMounted(async () => {
           <el-table :data="detailMembers" size="small" max-height="240">
             <el-table-column label="姓名" width="120"><template #default="{ row }">{{ row.user?.realName || '-' }}</template></el-table-column>
             <el-table-column label="账号" width="120"><template #default="{ row }">{{ row.user?.username || '-' }}</template></el-table-column>
-            <el-table-column label="类型" width="90"><template #default="{ row }">{{ row.user?.userType || '-' }}</template></el-table-column>
+            <el-table-column label="类型" width="90"><template #default="{ row }">{{ labelUserType(row.user?.userType) }}</template></el-table-column>
             <el-table-column label="队长" width="70"><template #default="{ row }">{{ row.isCaptain === 1 ? '是' : '否' }}</template></el-table-column>
-            <el-table-column prop="joinStatus" label="状态" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">{{ labelInviteStatus(row.joinStatus) }}</template>
+            </el-table-column>
           </el-table>
           <h3 class="detail-section-title">指导教师</h3>
           <el-table :data="detailTeachers" size="small" max-height="200">
             <el-table-column label="姓名" width="120"><template #default="{ row }">{{ row.user?.realName || '-' }}</template></el-table-column>
             <el-table-column label="账号" width="120"><template #default="{ row }">{{ row.user?.username || '-' }}</template></el-table-column>
-            <el-table-column prop="joinStatus" label="状态" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">{{ labelInviteStatus(row.joinStatus) }}</template>
+            </el-table-column>
           </el-table>
         </template>
       </div>

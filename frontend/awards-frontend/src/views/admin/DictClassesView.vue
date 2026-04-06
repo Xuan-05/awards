@@ -163,7 +163,7 @@ onMounted(async () => {
 
         <el-card style="width: 100%">
           <el-table :data="rows" v-loading="loading" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="90" />
+            <el-table-column prop="id" label="编号" width="90" />
             <el-table-column prop="deptId" label="院系" width="200">
               <template #default="{ row }">
                 <span>{{ deptNameById[row.deptId] || `ID:${row.deptId}` }}</span>

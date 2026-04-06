@@ -4,6 +4,7 @@ import { ElMessage, ElMessageBox } from "element-plus";
 import { http } from "../../api/http";
 import { useUserStore } from "../../stores/user";
 import type { ApiResponse, PageResult } from "../../types/api";
+import { labelRoleCode, labelUserType } from "../../utils/displayLabels";
 
 type Dept = {
   id: number;
@@ -162,7 +163,7 @@ function canOperate(row: UserRow) {
 
 async function toggleUser(row: UserRow) {
   if (!canOperate(row)) {
-    ElMessage.warning("无权限操作 SYS_ADMIN 用户");
+    ElMessage.warning("无权限操作系统管理员用户");
     return;
   }
   await ElMessageBox.confirm(
@@ -180,7 +181,7 @@ async function toggleUser(row: UserRow) {
 
 async function resetPassword(row: UserRow) {
   if (!canOperate(row)) {
-    ElMessage.warning("无权限操作 SYS_ADMIN 用户");
+    ElMessage.warning("无权限操作系统管理员用户");
     return;
   }
   await ElMessageBox.confirm(
@@ -201,7 +202,7 @@ const roleForm = reactive({ roleCodes: [] as string[] });
 
 function openRoleDialog(row: UserRow) {
   if (!canOperate(row)) {
-    ElMessage.warning("无权限操作 SYS_ADMIN 用户");
+    ElMessage.warning("无权限操作系统管理员用户");
     return;
   }
   roleEditing.value = row;
@@ -232,7 +233,7 @@ const profileForm = reactive({
 
 async function openProfileDialog(row: UserRow) {
   if (!canOperate(row)) {
-    ElMessage.warning("无权限操作 SYS_ADMIN 用户");
+    ElMessage.warning("无权限操作系统管理员用户");
     return;
   }
   profileEditing.value = row;
@@ -425,21 +426,20 @@ onMounted(async () => {
             <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
           <span
-            >校级管理员可分配除 SYS_ADMIN 外的角色；若目标用户含
-            SYS_ADMIN，则只有 SYS_ADMIN 可操作。</span
+            >校级管理员可分配除「系统管理员」外的角色；若目标用户含「系统管理员」角色，则只有系统管理员可操作。</span
           >
         </div>
 
         <!-- 用户表格 -->
         <div class="user-table" v-loading="loading">
           <el-table :data="rows" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="id" label="编号" width="70" />
             <el-table-column prop="username" label="账号" width="140" />
             <el-table-column prop="realName" label="姓名" width="100" />
             <el-table-column prop="userType" label="类型" width="80">
               <template #default="{ row }">
                 <span class="type-tag" :class="row.userType.toLowerCase()">{{
-                  row.userType
+                  labelUserType(row.userType)
                 }}</span>
               </template>
             </el-table-column>
@@ -481,7 +481,7 @@ onMounted(async () => {
             <el-table-column prop="roles" label="角色" min-width="180">
               <template #default="{ row }">
                 <span v-for="r in row.roles" :key="r" class="role-tag">{{
-                  r
+                  labelRoleCode(r)
                 }}</span>
               </template>
             </el-table-column>
@@ -561,7 +561,7 @@ onMounted(async () => {
           <el-option
             v-for="r in roles"
             :key="r.roleCode"
-            :label="`${r.roleName}(${r.roleCode})`"
+            :label="r.roleName || labelRoleCode(r.roleCode)"
             :value="r.roleCode"
           />
         </el-select>
@@ -582,7 +582,7 @@ onMounted(async () => {
       <div class="dialog-user-info">
         <span class="dialog-user-name">{{ profileEditing?.realName }}</span>
         <span class="dialog-user-account">{{ profileEditing?.username }}</span>
-        <span class="dialog-user-type">{{ profileEditing?.userType }}</span>
+        <span class="dialog-user-type">{{ labelUserType(profileEditing?.userType) }}</span>
       </div>
       <div class="dialog-field">
         <label>院系</label>

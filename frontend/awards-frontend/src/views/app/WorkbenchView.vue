@@ -111,7 +111,7 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
         </div>
         <div class="stat-content">
           <span class="stat-value">{{ summary?.pendingAuditCount ?? 0 }}</span>
-          <span class="stat-label">待审核</span>
+          <span class="stat-label">待校级审核</span>
         </div>
       </div>
 
@@ -129,7 +129,7 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
         </div>
         <div class="stat-content">
           <span class="stat-value">{{ summary?.approvedCount ?? 0 }}</span>
-          <span class="stat-label">已通过</span>
+          <span class="stat-label">审核通过</span>
         </div>
       </div>
     </div>

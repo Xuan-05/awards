@@ -12,6 +12,7 @@ import { useRouter } from 'vue-router'
 import { http } from '../../api/http'
 import { useUserStore } from '../../stores/user'
 import type { ApiResponse, PageResult } from '../../types/api'
+import { labelRecordStatus } from '../../utils/displayLabels'
 
 type Team = { id: number; teamName: string; captainUserId: number }
 type Competition = { id: number; competitionName: string; enabled: number }
@@ -36,7 +37,7 @@ const tabs = [
   { label: '草稿', value: 'DRAFT' },
   { label: '待校级审核', value: 'PENDING_SCHOOL' },
   { label: '校级驳回', value: 'SCHOOL_REJECTED' },
-  { label: '已通过', value: 'APPROVED' },
+  { label: '审核通过', value: 'APPROVED' },
 ]
 
 // 列表 loading
@@ -150,15 +151,6 @@ onMounted(async () => {
   await load()
 })
 
-function getStatusLabel(status: string): string {
-  const map: Record<string, string> = {
-    'DRAFT': '草稿',
-    'PENDING_SCHOOL': '待校级审核',
-    'SCHOOL_REJECTED': '校级驳回',
-    'APPROVED': '已通过',
-  }
-  return map[status] || status
-}
 </script>
 
 <template>
@@ -231,7 +223,7 @@ function getStatusLabel(status: string): string {
     <div class="records-list" v-loading="loading">
       <div v-for="row in rows" :key="row.id" class="record-card" @click="router.push(`/app/records/${row.id}`)">
         <div class="record-status" :class="row.status.toLowerCase()">
-          {{ getStatusLabel(row.status) }}
+          {{ labelRecordStatus(row.status) }}
         </div>
         <div class="record-main">
           <div class="record-header">

@@ -210,7 +210,7 @@ onMounted(async () => {
         <!-- 数据表格 -->
         <div class="table-card" v-loading="loading">
           <el-table :data="rows" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="70" />
+            <el-table-column prop="id" label="编号" width="70" />
             <el-table-column prop="competitionName" label="竞赛名称" min-width="220">
               <template #default="{ row }">
                 <div class="comp-name">

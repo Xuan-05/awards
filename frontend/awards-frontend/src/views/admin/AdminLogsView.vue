@@ -13,6 +13,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http } from '../../api/http'
 import type { ApiResponse, PageResult } from '../../types/api'
+import { labelHttpMethod, labelOperateBizType } from '../../utils/displayLabels'
 
 type OperateLogRow = {
   id: number
@@ -198,15 +199,15 @@ onMounted(load)
         <div class="filter-inputs">
           <div class="filter-item">
             <label>用户ID</label>
-            <el-input-number v-model="op.userId" :min="1" placeholder="用户ID" controls-position="right" />
+            <el-input-number v-model="op.userId" :min="1" placeholder="用户编号" controls-position="right" />
           </div>
           <div class="filter-item">
             <label>业务类型</label>
-            <el-input v-model="op.bizType" placeholder="如 AWARD_RECORD" />
+            <el-input v-model="op.bizType" placeholder="业务类型编码，可留空查全部" />
           </div>
           <div class="filter-item">
             <label>动作</label>
-            <el-input v-model="op.action" placeholder="POST/PUT/DELETE" />
+            <el-input v-model="op.action" placeholder="请求方法，可留空查全部" />
           </div>
         </div>
         <div class="filter-actions">
@@ -238,7 +239,7 @@ onMounted(load)
             </div>
             <div class="timeline-content">
               <div class="timeline-header">
-                <span class="log-method" :class="log.httpMethod.toLowerCase()">{{ log.httpMethod }}</span>
+                <span class="log-method" :class="log.httpMethod.toLowerCase()">{{ labelHttpMethod(log.httpMethod) }}</span>
                 <span class="log-uri">{{ log.requestUri }}</span>
                 <span class="log-time">{{ formatTime(log.createdAt) }}</span>
               </div>
@@ -246,11 +247,11 @@ onMounted(load)
                 <div class="log-detail">
                   <div class="detail-item">
                     <span class="detail-label">业务</span>
-                    <span class="detail-value">{{ log.bizType || '-' }}</span>
+                    <span class="detail-value">{{ log.bizType ? labelOperateBizType(log.bizType) : '-' }}</span>
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">动作</span>
-                    <span class="detail-value">{{ log.action || '-' }}</span>
+                    <span class="detail-value">{{ log.action ? labelHttpMethod(log.action) : '-' }}</span>
                   </div>
                   <div class="detail-item">
                     <span class="detail-label">用户</span>
@@ -265,7 +266,7 @@ onMounted(load)
                     <span class="detail-value">{{ log.costMs ? `${log.costMs}ms` : '-' }}</span>
                   </div>
                   <div class="detail-item">
-                    <span class="detail-label">IP</span>
+                    <span class="detail-label">IP 地址</span>
                     <span class="detail-value">{{ log.ip || '-' }}</span>
                   </div>
                 </div>

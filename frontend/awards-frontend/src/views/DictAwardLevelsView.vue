@@ -185,7 +185,7 @@ onMounted(async () => {
 
     <el-card style="width: 100%">
       <el-table :data="rows" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="编号" width="80" />
         <el-table-column prop="awardScopeId" label="范围" width="160">
           <template #default="{ row }">{{
             scopeName(row.awardScopeId)

@@ -100,7 +100,7 @@ onMounted(load)
 
     <el-card style="width: 100%">
       <el-table :data="rows" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="ID" width="80" />
+        <el-table-column prop="id" label="编号" width="80" />
         <el-table-column prop="categoryName" label="名称" />
         <el-table-column prop="enabled" label="启用" width="100">
           <template #default="{ row }">

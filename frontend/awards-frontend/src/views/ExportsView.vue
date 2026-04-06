@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { http } from '../api/http'
 import { ElMessage } from 'element-plus'
+import { labelExportType } from '../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 type PageResult<T> = { total: number; list: T[] }
@@ -98,7 +99,7 @@ onMounted(load)
         <line x1="12" y1="9" x2="12" y2="13"/>
         <line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
-      <span>导出严格走模板填充，请将学校模板放到后端配置的 templates 目录</span>
+      <span>导出严格走模板填充，请将学校模板放到后端配置的模板目录中</span>
     </div>
 
     <!-- 操作按钮区 -->
@@ -166,7 +167,7 @@ onMounted(load)
         <div class="task-content">
           <div class="task-header">
             <span class="task-id">#{{ task.id }}</span>
-            <span class="task-type">{{ task.exportType }}</span>
+            <span class="task-type">{{ labelExportType(task.exportType) }}</span>
             <span class="task-status" :class="getStatusClass(task.taskStatus)">
               {{ getStatusText(task.taskStatus) }}
             </span>

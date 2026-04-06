@@ -8,6 +8,13 @@ import { ElMessage } from "element-plus";
 import { http } from "../../api/http";
 import type { ApiResponse, PageResult } from "../../types/api";
 import type { Team, TeamMember, TeamTeacher } from "../../types/team";
+import {
+  labelAuditActionType,
+  labelAuditNodeType,
+  labelInviteStatus,
+  labelRecordStatus,
+  labelTeamStatus,
+} from "../../utils/displayLabels";
 
 type AwardRecord = {
   id: number;
@@ -88,16 +95,6 @@ function scopeName(id: number) {
 }
 function levelName(id: number) {
   return levels.value.find((x) => x.id === id)?.levelName ?? `等级 #${id}`;
-}
-function statusLabel(s: string) {
-  const map: Record<string, string> = {
-    DRAFT: "草稿",
-    PENDING_SCHOOL: "待校级审核",
-    SCHOOL_REJECTED: "校级已驳回",
-    APPROVED: "已通过",
-    ARCHIVED: "已归档",
-  };
-  return map[s] ?? s;
 }
 function attachmentLabel(f: RecordFileRel) {
   return f.fileName?.trim() ? f.fileName : `文件 #${f.fileId}`;
@@ -234,7 +231,7 @@ onMounted(async () => {
             record.status === 'APPROVED' ? 'ok' : record.status === 'SCHOOL_REJECTED' ? 'rej' : record.status === 'PENDING_SCHOOL' ? 'pending' : '',
           ]"
         >
-          {{ statusLabel(record.status) }}
+          {{ labelRecordStatus(record.status) }}
         </span>
       </div>
 
@@ -272,7 +269,7 @@ onMounted(async () => {
               <span class="label">归属院系</span>
               <span class="value">{{ deptNameById[team.ownerDeptId] ?? `#${team.ownerDeptId}` }}</span>
             </div>
-            <div class="info-cell"><span class="label">状态</span><span class="value">{{ team.status }}</span></div>
+            <div class="info-cell"><span class="label">状态</span><span class="value">{{ labelTeamStatus(team.status) }}</span></div>
           </div>
           <h3 class="sub-title">成员列表</h3>
           <el-table :data="members" size="small" border empty-text="暂无成员">
@@ -282,7 +279,9 @@ onMounted(async () => {
             <el-table-column label="学号/工号" min-width="120">
               <template #default="{ row }">{{ row.user?.username ?? "-" }}</template>
             </el-table-column>
-            <el-table-column prop="joinStatus" label="状态" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">{{ labelInviteStatus(row.joinStatus) }}</template>
+            </el-table-column>
             <el-table-column label="队长" width="80">
               <template #default="{ row }">{{ row.isCaptain === 1 ? "是" : "否" }}</template>
             </el-table-column>
@@ -295,7 +294,9 @@ onMounted(async () => {
             <el-table-column label="工号" min-width="120">
               <template #default="{ row }">{{ row.user?.username ?? "-" }}</template>
             </el-table-column>
-            <el-table-column prop="joinStatus" label="状态" width="100" />
+            <el-table-column label="状态" width="100">
+              <template #default="{ row }">{{ labelInviteStatus(row.joinStatus) }}</template>
+            </el-table-column>
           </el-table>
         </template>
         <p v-else class="muted">无法加载团队信息（无权限或团队不存在）</p>
@@ -319,10 +320,10 @@ onMounted(async () => {
             <div class="timeline-dot" />
             <div class="timeline-card">
               <div class="timeline-head">
-                <span>{{ l.nodeType }} / {{ l.actionType }}</span>
+                <span>{{ labelAuditNodeType(l.nodeType) }} / {{ labelAuditActionType(l.actionType) }}</span>
                 <span class="time">{{ l.createdAt }}</span>
               </div>
-              <div class="timeline-body">{{ l.fromStatus }} → {{ l.toStatus }}</div>
+              <div class="timeline-body">{{ labelRecordStatus(l.fromStatus) }} → {{ labelRecordStatus(l.toStatus) }}</div>
               <div v-if="l.commentText" class="timeline-comment">意见：{{ l.commentText }}</div>
             </div>
           </div>

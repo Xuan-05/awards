@@ -3,6 +3,11 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '../api/http'
 import { ElMessage } from 'element-plus'
+import {
+  labelAuditActionType,
+  labelAuditNodeType,
+  labelRecordStatus,
+} from '../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 type PageResult<T> = { total: number; list: T[] }
@@ -177,7 +182,7 @@ async function loadFiles(recordId: number) {
 async function approve(id: number) {
   const resp = await http.post<ApiResponse<null>>(`/audit/${id}/school/approve`)
   if (resp.data.code !== 0) throw new Error(resp.data.message)
-  ElMessage.success('已通过')
+  ElMessage.success('审核通过')
   await load()
   if (current.value?.id === id) await openDetail({ ...current.value, status: 'APPROVED' })
 }
@@ -246,7 +251,7 @@ onMounted(async () => {
             <polyline points="12,6 12,12 16,14"/>
           </svg>
         </div>
-        <span class="status-tab-label">待审核</span>
+        <span class="status-tab-label">待校级审核</span>
       </div>
       <div 
         class="status-tab" 
@@ -259,7 +264,7 @@ onMounted(async () => {
             <polyline points="22,4 12,14.01 9,11.01"/>
           </svg>
         </div>
-        <span class="status-tab-label">已通过</span>
+        <span class="status-tab-label">审核通过</span>
       </div>
       <div 
         class="status-tab" 
@@ -273,7 +278,7 @@ onMounted(async () => {
             <line x1="9" y1="9" x2="15" y2="15"/>
           </svg>
         </div>
-        <span class="status-tab-label">已驳回</span>
+        <span class="status-tab-label">校级驳回</span>
       </div>
     </div>
 
@@ -378,7 +383,7 @@ onMounted(async () => {
               <el-button size="small" @click="goDetail(row)">详情</el-button>
               <el-button size="small" @click="openDetail(row)">审核记录</el-button>
               <span :class="['status-badge', row.status === 'APPROVED' ? 'approved' : 'rejected']">
-                {{ row.status === 'APPROVED' ? '已通过' : '已驳回' }}
+                {{ labelRecordStatus(row.status) }}
               </span>
             </template>
           </div>
@@ -411,7 +416,7 @@ onMounted(async () => {
         <div class="detail-header">
           <h3>{{ current.projectName || '未命名项目' }}</h3>
           <span :class="['detail-status', current.status === 'APPROVED' ? 'approved' : current.status === 'SCHOOL_REJECTED' ? 'rejected' : 'pending']">
-            {{ current.status === 'APPROVED' ? '已通过' : current.status === 'SCHOOL_REJECTED' ? '已驳回' : '待审核' }}
+            {{ labelRecordStatus(current.status) }}
           </span>
         </div>
 
@@ -461,11 +466,11 @@ onMounted(async () => {
               <div class="timeline-dot"></div>
               <div class="timeline-content">
                 <div class="timeline-header">
-                  <span class="timeline-action">{{ l.nodeType }} / {{ l.actionType }}</span>
+                  <span class="timeline-action">{{ labelAuditNodeType(l.nodeType) }} / {{ labelAuditActionType(l.actionType) }}</span>
                   <span class="timeline-time">{{ l.createdAt }}</span>
                 </div>
                 <div class="timeline-status">
-                  {{ l.fromStatus }} → {{ l.toStatus }}
+                  {{ labelRecordStatus(l.fromStatus) }} → {{ labelRecordStatus(l.toStatus) }}
                 </div>
                 <div v-if="l.commentText" class="timeline-comment">
                   意见：{{ l.commentText }}

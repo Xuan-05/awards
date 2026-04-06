@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { http } from '../api/http'
 import type { FormInstance, FormRules } from 'element-plus'
+import { labelRecordStatus } from '../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 
@@ -45,8 +46,8 @@ const form = reactive({
   semester: '',
 })
 const rules: FormRules = {
-  teamId: [{ required: true, message: '请输入 teamId', trigger: 'blur' }],
-  competitionId: [{ required: true, message: '请输入 competitionId', trigger: 'blur' }],
+  teamId: [{ required: true, message: '请输入团队编号', trigger: 'blur' }],
+  competitionId: [{ required: true, message: '请输入竞赛编号', trigger: 'blur' }],
 }
 
 async function create() {
@@ -75,10 +76,12 @@ onMounted(load)
     </el-space>
 
     <el-table :data="list" border :loading="loading">
-      <el-table-column prop="id" label="ID" width="80" />
-      <el-table-column prop="status" label="状态" width="140" />
-      <el-table-column prop="teamId" label="teamId" width="100" />
-      <el-table-column prop="competitionId" label="competitionId" width="120" />
+      <el-table-column prop="id" label="编号" width="80" />
+      <el-table-column label="状态" width="140">
+        <template #default="{ row }">{{ labelRecordStatus(row.status) }}</template>
+      </el-table-column>
+      <el-table-column prop="teamId" label="团队编号" width="100" />
+      <el-table-column prop="competitionId" label="竞赛编号" width="120" />
       <el-table-column prop="projectName" label="项目名称" min-width="180" />
       <el-table-column prop="semester" label="学期" width="120" />
       <el-table-column label="操作" width="140">
@@ -97,10 +100,10 @@ onMounted(load)
 
     <el-dialog v-model="dialogVisible" title="新建获奖记录" width="520px">
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
-        <el-form-item label="teamId" prop="teamId">
+        <el-form-item label="团队编号" prop="teamId">
           <el-input v-model.number="form.teamId" />
         </el-form-item>
-        <el-form-item label="competitionId" prop="competitionId">
+        <el-form-item label="竞赛编号" prop="competitionId">
           <el-input v-model.number="form.competitionId" />
         </el-form-item>
         <el-form-item label="项目名称">

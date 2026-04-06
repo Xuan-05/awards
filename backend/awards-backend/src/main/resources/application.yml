@@ -1,3 +1,7 @@
+spring:
+  profiles:
+    active: local
+
 server:
   port: 8081
   servlet:
@@ -17,8 +21,7 @@ spring:
       max-request-size: 50MB
   datasource:
     url: jdbc:mysql://localhost:3306/awards?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
-    username: root
-    password: liuzihan3588
+    
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
       initialization-fail-timeout: 0

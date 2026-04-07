@@ -29,7 +29,7 @@ server:
       enabled: true
       force: true
 
-<<<<<<< HEAD
+
 spring:
   application:
     name: awards-backend
@@ -47,9 +47,9 @@ spring:
     hikari:
       initialization-fail-timeout: 0
 
-=======
+
 # MyBatis-Plus配置
->>>>>>> 6acbd62c71eeeb100b31f7afefef7377f9ee0a85
+
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

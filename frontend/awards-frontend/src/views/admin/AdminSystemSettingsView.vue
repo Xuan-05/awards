@@ -10,6 +10,7 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { http } from '../../api/http'
 import type { ApiResponse } from '../../types/api'
+import { labelConfigValueType } from '../../utils/displayLabels'
 
 /**
  * 系统参数（后端 SysConfig 对应字段）。
@@ -256,7 +257,7 @@ function formatDate(dateStr: string) {
                   <line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
               </div>
-              <span class="setting-type" :class="config.valueType.toLowerCase()">{{ config.valueType }}</span>
+              <span class="setting-type" :class="config.valueType.toLowerCase()">{{ labelConfigValueType(config.valueType) }}</span>
             </div>
             
             <div class="setting-body">
@@ -301,7 +302,7 @@ function formatDate(dateStr: string) {
               </svg>
             </div>
             <div class="runtime-content">
-              <span class="runtime-label">storage.base-dir</span>
+              <span class="runtime-label">存储根目录</span>
               <span class="runtime-value">{{ runtime?.storageBaseDir || '-' }}</span>
             </div>
           </div>
@@ -315,7 +316,7 @@ function formatDate(dateStr: string) {
               </svg>
             </div>
             <div class="runtime-content">
-              <span class="runtime-label">export.out-dir</span>
+              <span class="runtime-label">导出输出目录</span>
               <span class="runtime-value">{{ runtime?.exportOutDir || '-' }}</span>
             </div>
           </div>
@@ -330,7 +331,7 @@ function formatDate(dateStr: string) {
               </svg>
             </div>
             <div class="runtime-content">
-              <span class="runtime-label">export.template.detail</span>
+              <span class="runtime-label">明细导出模板路径</span>
               <span class="runtime-value">{{ runtime?.exportTemplateDetail || '-' }}</span>
             </div>
           </div>
@@ -345,7 +346,7 @@ function formatDate(dateStr: string) {
               </svg>
             </div>
             <div class="runtime-content">
-              <span class="runtime-label">export.template.summary</span>
+              <span class="runtime-label">汇总导出模板路径</span>
               <span class="runtime-value">{{ runtime?.exportTemplateSummary || '-' }}</span>
             </div>
           </div>
@@ -388,10 +389,10 @@ function formatDate(dateStr: string) {
         <div class="form-group">
           <label>类型</label>
           <el-select v-model="form.valueType" style="width: 100%">
-            <el-option label="STRING" value="STRING" />
-            <el-option label="INT" value="INT" />
-            <el-option label="BOOL" value="BOOL" />
-            <el-option label="JSON" value="JSON" />
+            <el-option label="字符串" value="STRING" />
+            <el-option label="整数" value="INT" />
+            <el-option label="布尔" value="BOOL" />
+            <el-option label="结构化数据" value="JSON" />
           </el-select>
         </div>
 

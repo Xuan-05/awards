@@ -13,6 +13,11 @@ import { useUserStore } from "../stores/user";
 import { useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import type { ApiResponse } from "../types/api";
+import {
+  labelInviteStatus,
+  labelInviteeType,
+  labelTeamStatus,
+} from "../utils/displayLabels";
 
 type Team = {
   id: number;
@@ -123,7 +128,7 @@ async function accept(invId: number) {
     `/team-invitations/${invId}/accept`,
   );
   if (resp.data.code !== 0) throw new Error(resp.data.message);
-  ElMessage.success("已接受");
+  ElMessage.success("已加入团队");
   // 接受后：邀请状态变更 + 团队列表可能变化，因此两边都刷新
   await Promise.all([loadInvitations(), load()]);
 }
@@ -158,22 +163,13 @@ function formatDate(dateStr?: string): string {
   return `${year}年${month}月${day}日 ${hour}:${minute}`;
 }
 
-// 状态文本映射
-function statusText(status: string): string {
-  const map: Record<string, string> = {
-    PENDING: '等待处理',
-    ACCEPTED: '已接受',
-    REJECTED: '已拒绝',
-  };
-  return map[status] || status;
-}
-
-// 状态标签类型
+// 状态标签类型（邀请状态）
 function statusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
   const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = {
     PENDING: 'warning',
     ACCEPTED: 'success',
     REJECTED: 'danger',
+    INVITED: 'info',
   };
   return map[status] ?? 'info';
 }
@@ -234,7 +230,7 @@ function statusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
                 院系 #{{ team.ownerDeptId }}
               </span>
               <span class="meta-item status" :class="team.status?.toLowerCase()">
-                {{ team.status }}
+                {{ labelTeamStatus(team.status) }}
               </span>
             </div>
             <p class="team-remark" v-if="team.remark">{{ team.remark }}</p>
@@ -281,7 +277,7 @@ function statusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
                 院系 #{{ team.ownerDeptId }}
               </span>
               <span class="meta-item status" :class="team.status?.toLowerCase()">
-                {{ team.status }}
+                {{ labelTeamStatus(team.status) }}
               </span>
             </div>
             <p class="team-remark" v-if="team.remark">{{ team.remark }}</p>
@@ -335,14 +331,14 @@ function statusType(status: string): 'success' | 'warning' | 'danger' | 'info' {
         <el-table-column prop="inviteeType" label="邀请类型" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="row.inviteeType === 'MEMBER' ? 'primary' : 'success'">
-              {{ row.inviteeType === 'MEMBER' ? '队员' : '指导教师' }}
+              {{ labelInviteeType(row.inviteeType) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column prop="status" label="状态" width="120">
           <template #default="{ row }">
             <el-tag size="small" :type="statusType(row.status)">
-              {{ statusText(row.status) }}
+              {{ labelInviteStatus(row.status) }}
             </el-tag>
           </template>
         </el-table-column>

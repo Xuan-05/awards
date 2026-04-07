@@ -7,6 +7,8 @@ import com.university.awards.common.PageResult;
 import com.university.awards.dict.entity.*;
 import com.university.awards.dict.service.*;
 import com.university.awards.rbac.service.AuthzService;
+import com.university.awards.record.entity.BizAwardRecord;
+import com.university.awards.record.mapper.BizAwardRecordMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -45,6 +47,7 @@ public class DictController {
     private final DictAwardLevelService awardLevelService;
     private final DictCompetitionOrganizerService competitionOrganizerService;
     private final AuthzService authz;
+    private final BizAwardRecordMapper awardRecordMapper;
 
     // ---------------- categories ----------------
 
@@ -123,6 +126,27 @@ public class DictController {
         return ApiResponse.ok(null);
     }
 
+    /**
+     * 删除竞赛类别（仅停用状态可删除；有竞赛引用时不允许删除）。
+     */
+    @DeleteMapping("/categories/{id}")
+    public ApiResponse<Void> deleteCategory(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        DictCompetitionCategory e = categoryService.getById(id);
+        if (e == null)
+            return ApiResponse.ok(null);
+        if (e.getEnabled() != null && e.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的竞赛类别不能删除，请先停用");
+        }
+        long n = competitionService.count(new LambdaQueryWrapper<DictCompetition>()
+                .eq(DictCompetition::getCategoryId, id));
+        if (n > 0) {
+            return ApiResponse.fail(1, "仍有竞赛引用该类别，无法删除");
+        }
+        categoryService.removeById(id);
+        return ApiResponse.ok(null);
+    }
+
     // ---------------- organizers ----------------
 
     /**
@@ -191,6 +215,27 @@ public class DictController {
         return ApiResponse.ok(null);
     }
 
+    /**
+     * 删除主办方（仅停用状态可删除；仍被竞赛关联时不允许删除）。
+     */
+    @DeleteMapping("/organizers/{id}")
+    public ApiResponse<Void> deleteOrganizer(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        DictOrganizer e = organizerService.getById(id);
+        if (e == null)
+            return ApiResponse.ok(null);
+        if (e.getEnabled() != null && e.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的主办方不能删除，请先停用");
+        }
+        long n = competitionOrganizerService.count(new LambdaQueryWrapper<DictCompetitionOrganizer>()
+                .eq(DictCompetitionOrganizer::getOrganizerId, id));
+        if (n > 0) {
+            return ApiResponse.fail(1, "仍有竞赛关联该主办方，无法删除");
+        }
+        organizerService.removeById(id);
+        return ApiResponse.ok(null);
+    }
+
     // ---------------- award scopes ----------------
 
     @GetMapping("/award-scopes")
@@ -237,6 +282,33 @@ public class DictController {
             return ApiResponse.ok(null);
         e.setEnabled(e.getEnabled() != null && e.getEnabled() == 1 ? 0 : 1);
         awardScopeService.updateById(e);
+        return ApiResponse.ok(null);
+    }
+
+    /**
+     * 删除获奖范围（仅停用状态可删除；有等级或填报引用时不允许删除）。
+     */
+    @DeleteMapping("/award-scopes/{id}")
+    public ApiResponse<Void> deleteAwardScope(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        DictAwardScope e = awardScopeService.getById(id);
+        if (e == null)
+            return ApiResponse.ok(null);
+        if (e.getEnabled() != null && e.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的获奖范围不能删除，请先停用");
+        }
+        long levels = awardLevelService.count(new LambdaQueryWrapper<DictAwardLevel>()
+                .eq(DictAwardLevel::getAwardScopeId, id));
+        if (levels > 0) {
+            return ApiResponse.fail(1, "仍有获奖等级引用该范围，无法删除");
+        }
+        long records = awardRecordMapper.selectCount(new LambdaQueryWrapper<BizAwardRecord>()
+                .eq(BizAwardRecord::getAwardScopeId, id)
+                .and(w -> w.eq(BizAwardRecord::getDeleted, 0).or().isNull(BizAwardRecord::getDeleted)));
+        if (records > 0) {
+            return ApiResponse.fail(1, "仍有获奖填报引用该范围，无法删除");
+        }
+        awardScopeService.removeById(id);
         return ApiResponse.ok(null);
     }
 
@@ -512,6 +584,29 @@ public class DictController {
             return ApiResponse.ok(null);
         e.setEnabled(e.getEnabled() != null && e.getEnabled() == 1 ? 0 : 1);
         competitionService.updateById(e);
+        return ApiResponse.ok(null);
+    }
+
+    /**
+     * 删除竞赛（仅停用状态可删除；有填报引用时不允许删除；删除前清理主办方关联）。
+     */
+    @DeleteMapping("/competitions/{id}")
+    public ApiResponse<Void> deleteCompetition(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        DictCompetition e = competitionService.getById(id);
+        if (e == null)
+            return ApiResponse.ok(null);
+        if (e.getEnabled() != null && e.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的竞赛不能删除，请先停用");
+        }
+        long records = awardRecordMapper.selectCount(new LambdaQueryWrapper<BizAwardRecord>()
+                .eq(BizAwardRecord::getCompetitionId, id)
+                .and(w -> w.eq(BizAwardRecord::getDeleted, 0).or().isNull(BizAwardRecord::getDeleted)));
+        if (records > 0) {
+            return ApiResponse.fail(1, "仍有获奖填报引用该竞赛，无法删除");
+        }
+        competitionOrganizerService.saveCompetitionOrganizers(id, java.util.List.of());
+        competitionService.removeById(id);
         return ApiResponse.ok(null);
     }
 

@@ -523,7 +523,7 @@ function triggerUpload() {
       </button>
       <div class="header-content">
         <h1 class="page-title">{{ isNew ? "新建填报" : "编辑填报" }}</h1>
-        <p class="page-subtitle" v-if="recordId">ID: {{ recordId }}</p>
+        <p class="page-subtitle" v-if="recordId">编号：{{ recordId }}</p>
       </div>
     </div>
 

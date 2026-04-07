@@ -1,20 +1,17 @@
-server:
-  port: 8081
-  servlet:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
-
+# 环境配置（所有spring配置合并为一个）
 spring:
+  profiles:
+    active: local
   application:
     name: awards-backend
   main:
     allow-bean-definition-overriding: true
+  # 文件上传配置
   servlet:
     multipart:
       max-file-size: 50MB
       max-request-size: 50MB
+  # 数据库配置
   datasource:
     url: jdbc:mysql://localhost:3306/awards?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&useSSL=false&allowPublicKeyRetrieval=true
     username: root
@@ -23,6 +20,16 @@ spring:
     hikari:
       initialization-fail-timeout: 0
 
+# 服务器配置
+server:
+  port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+# MyBatis-Plus配置
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
@@ -30,28 +37,30 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+# Swagger3接口文档
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui.html
 
+# Sa-Token 权限认证
 sa-token:
   token-name: Authorization
   token-prefix: Bearer
   is-read-header: true
   is-read-cookie: false
   is-read-body: false
-  is-read-query: true # 支持从URL参数读取token
-  timeout: 2592000 # 30 days
+  is-read-query: true
+  timeout: 2592000
   active-timeout: -1
   is-concurrent: true
   is-share: true
   is-log: false
 
+# 自定义配置
 storage:
   base-dir: ./data/files
-
 export:
   out-dir: ./data/exports
   template:

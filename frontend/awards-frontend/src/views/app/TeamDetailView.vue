@@ -11,6 +11,11 @@ import type {
   TeamMember,
   TeamTeacher,
 } from "../../types/team";
+import {
+  labelInviteStatus,
+  labelInviteeType,
+  labelTeamStatus,
+} from "../../utils/displayLabels";
 
 const route = useRoute();
 const user = useUserStore();
@@ -42,34 +47,8 @@ const invLoading = ref(false);
 const invitations = ref<TeamInvitation[]>([]);
 
 
-/** 仅用于界面展示，不改变接口入参或业务状态值 */
-function formatTeamStatus(status: string | undefined | null) {
-  if (!status) return "-";
-  const map: Record<string, string> = { ACTIVE: "正常" };
-  return map[status] ?? status;
-}
-
 function formatTeamRemark(remark: string) {
   return remark === "selftest" ? "自测团队" : remark;
-}
-
-function formatJoinStatus(status: string | undefined | null) {
-  if (!status) return "-";
-  const map: Record<string, string> = {
-    ACCEPTED: "已加入",
-    PENDING: "待处理",
-  };
-  return map[status] ?? status;
-}
-
-function formatInvitationStatus(status: string | undefined | null) {
-  if (!status) return "-";
-  const map: Record<string, string> = {
-    PENDING: "待处理",
-    ACCEPTED: "已接受",
-    REJECTED: "已拒绝",
-  };
-  return map[status] ?? status;
 }
 
 async function load() {
@@ -299,7 +278,7 @@ onMounted(async () => {
               <circle cx="12" cy="12" r="10" />
               <polyline points="12,6 12,12 16,14" />
             </svg>
-            {{ formatTeamStatus(team?.status) }}
+            {{ labelTeamStatus(team?.status) }}
           </span>
         </div>
         <p class="team-remark" v-if="team?.remark">
@@ -327,7 +306,7 @@ onMounted(async () => {
             </svg>
           </div>
           <div class="invite-content">
-            <h4>邀请队员</h4>
+            <h4>邀请成员</h4>
             <p>输入学号查询学生信息，确认后发送邀请</p>
             <div class="invite-form">
               <div class="input-with-search">
@@ -443,7 +422,7 @@ onMounted(async () => {
             }}</span>
           </div>
           <div class="member-badge" :class="member.joinStatus?.toLowerCase()">
-            {{ formatJoinStatus(member.joinStatus) }}
+            {{ labelInviteStatus(member.joinStatus) }}
           </div>
           <div class="member-captain-badge" v-if="member.isCaptain === 1">
             队长
@@ -494,7 +473,7 @@ onMounted(async () => {
             }}</span>
           </div>
           <div class="teacher-badge" :class="teacher.joinStatus?.toLowerCase()">
-            {{ formatJoinStatus(teacher.joinStatus) }}
+            {{ labelInviteStatus(teacher.joinStatus) }}
           </div>
           <button
             v-if="canManage"
@@ -527,7 +506,7 @@ onMounted(async () => {
       <div class="invitations-list" v-loading="invLoading">
         <div v-for="inv in invitations" :key="inv.id" class="invitation-item">
           <div class="invitation-type" :class="inv.inviteeType?.toLowerCase()">
-            {{ inv.inviteeType === "MEMBER" ? "队员" : "教师" }}
+            {{ labelInviteeType(inv.inviteeType) }}
           </div>
           <div class="invitation-info">
             <span class="invitee-name">{{ inv.invitee?.realName || "-" }}</span>
@@ -536,7 +515,7 @@ onMounted(async () => {
             }}</span>
           </div>
           <div class="invitation-status" :class="inv.status?.toLowerCase()">
-            {{ formatInvitationStatus(inv.status) }}
+            {{ labelInviteStatus(inv.status) }}
           </div>
           <div class="invitation-meta">
             <span class="inviter"

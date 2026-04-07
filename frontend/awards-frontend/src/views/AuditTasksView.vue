@@ -3,6 +3,11 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { http } from '../api/http'
 import { ElMessage } from 'element-plus'
+import {
+  labelAuditActionType,
+  labelAuditNodeType,
+  labelRecordStatus,
+} from '../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 type PageResult<T> = { total: number; list: T[] }
@@ -175,12 +180,29 @@ async function loadFiles(recordId: number) {
   }
 }
 
+
 async function approve(id: number) {
-  const resp = await http.post<ApiResponse<null>>(`/audit/${id}/school/approve`)
-  if (resp.data.code !== 0) throw new Error(resp.data.message)
-  ElMessage.success('已通过')
-  await load()
-  if (current.value?.id === id) await openDetail({ ...current.value, status: 'APPROVED' })
+  // 确认弹窗
+  ElMessageBox.confirm(
+    '确定要将该记录改为「通过」吗？',
+    '确认操作',
+    {
+      confirmButtonText: '确定',
+      cancelButtonText: '取消',
+      type: 'success'
+    }
+  ).then(async () => {
+    // 只有点「确定」才执行
+    const resp = await http.post<ApiResponse<null>>(`/audit/${id}/school/approve`)
+    if (resp.data.code !== 0) throw new Error(resp.data.message)
+    ElMessage.success('审核通过')
+    await load()
+    if (current.value?.id === id) {
+      await openDetail({ ...current.value, status: 'APPROVED' })
+    }
+  }).catch(() => {
+    ElMessage.info('已取消操作')
+  })
 }
 
 const rejectOpen = ref(false)
@@ -195,12 +217,23 @@ function openReject(id: number) {
 
 async function doReject() {
   if (!rejectRecordId) return
-  const resp = await http.post<ApiResponse<null>>(`/audit/${rejectRecordId}/school/reject`, { comment: rejectForm.comment || '材料不完整' })
-  if (resp.data.code !== 0) throw new Error(resp.data.message)
-  ElMessage.success('已驳回')
-  rejectOpen.value = false
-  await load()
-  if (current.value?.id === rejectRecordId) await openDetail({ ...current.value, status: 'SCHOOL_REJECTED' })
+  try {
+    const resp = await http.post<ApiResponse<null>>(`/audit/${rejectRecordId}/school/reject`, {
+      comment: rejectForm.comment || '材料不完整'
+    })
+    if (resp.data.code !== 0) throw new Error(resp.data.message)
+
+    ElMessage.success('已驳回')
+    rejectOpen.value = false // 关闭弹窗
+    await load() // 刷新列表
+
+    // 详情抽屉同步更新
+    if (current.value?.id === rejectRecordId) {
+      await openDetail({ ...current.value, status: 'SCHOOL_REJECTED' })
+    }
+  } catch (err) {
+    ElMessage.error('驳回失败：' + (err as Error).message)
+  }
 }
 
 function preview(fileId: number) {
@@ -236,49 +269,40 @@ onMounted(async () => {
 
     <!-- 状态切换（完全保留原代码） -->
     <div class="status-tabs">
-      <div 
-        class="status-tab" 
-        :class="{ active: query.status === 'PENDING_SCHOOL' }"
-        @click="query.status = 'PENDING_SCHOOL'; load()"
-      >
+      <div class="status-tab" :class="{ active: query.status === 'PENDING_SCHOOL' }"
+        @click="query.status = 'PENDING_SCHOOL'; load()">
         <div class="status-tab-icon pending">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12,6 12,12 16,14"/>
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12,6 12,12 16,14" />
           </svg>
         </div>
-        <span class="status-tab-label">待审核</span>
+        <span class="status-tab-label">待校级审核</span>
       </div>
-      <div 
-        class="status-tab" 
-        :class="{ active: query.status === 'APPROVED' }"
-        @click="query.status = 'APPROVED'; load()"
-      >
+      <div class="status-tab" :class="{ active: query.status === 'APPROVED' }"
+        @click="query.status = 'APPROVED'; load()">
         <div class="status-tab-icon approved">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22,4 12,14.01 9,11.01"/>
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22,4 12,14.01 9,11.01" />
           </svg>
         </div>
-        <span class="status-tab-label">已通过</span>
+        <span class="status-tab-label">审核通过</span>
       </div>
-      <div 
-        class="status-tab" 
-        :class="{ active: query.status === 'SCHOOL_REJECTED' }"
-        @click="query.status = 'SCHOOL_REJECTED'; load()"
-      >
+      <div class="status-tab" :class="{ active: query.status === 'SCHOOL_REJECTED' }"
+        @click="query.status = 'SCHOOL_REJECTED'; load()">
         <div class="status-tab-icon rejected">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="15" y1="9" x2="9" y2="15"/>
-            <line x1="9" y1="9" x2="15" y2="15"/>
+            <circle cx="12" cy="12" r="10" />
+            <line x1="15" y1="9" x2="9" y2="15" />
+            <line x1="9" y1="9" x2="15" y2="15" />
           </svg>
         </div>
-        <span class="status-tab-label">已驳回</span>
+        <span class="status-tab-label">校级驳回</span>
       </div>
     </div>
 
-    <!-- 筛选栏（完全保留原代码） -->
+    <!-- 筛选栏 -->
     <div class="filter-bar">
       <div class="filter-group">
         <el-select v-model="query.deptId" clearable filterable placeholder="院系" class="filter-select">
@@ -290,9 +314,10 @@ onMounted(async () => {
         <el-input v-model="query.semester" placeholder="学期 如 2025-2026-1" class="filter-input" />
         <el-input v-model="query.keyword" placeholder="项目名称关键字" class="filter-input">
           <template #prefix>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;">
-              <circle cx="11" cy="11" r="8"/>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              style="width: 14px; height: 14px;">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
           </template>
         </el-input>
@@ -343,7 +368,8 @@ onMounted(async () => {
 
         <!-- 6. 状态 -->
         <div class="task-col task-col-status td-center">
-          <span :class="['status-badge', row.status === 'APPROVED' ? 'approved' : row.status === 'SCHOOL_REJECTED' ? 'rejected' : 'pending']">
+          <span
+            :class="['status-badge', row.status === 'APPROVED' ? 'approved' : row.status === 'SCHOOL_REJECTED' ? 'rejected' : 'pending']">
             {{ row.status === 'APPROVED' ? '已通过' : row.status === 'SCHOOL_REJECTED' ? '已驳回' : '待审核' }}
           </span>
         </div>
@@ -358,54 +384,50 @@ onMounted(async () => {
           <el-button size="small" text @click="openDetail(row)">查看</el-button>
         </div>
 
-<!-- 9. 操作列（最终版） -->
-<div class="task-col task-col-action td-center">
-  <!-- 待审核：通过 + 驳回 -->
-  <template v-if="row.status === 'PENDING_SCHOOL'">
-    <el-button type="success" size="small" @click="approve(row.id)">通过</el-button>
-    <el-button type="danger" size="small" @click="openReject(row.id)">驳回</el-button>
-  </template>
+        <!-- 9. 操作列 -->
+        <div class="task-col task-col-action td-center">
+          <!-- 待审核：通过 + 驳回 -->
+          <template v-if="row.status === 'PENDING_SCHOOL'">
+            <el-button type="success" size="small" @click="approve(row.id)">通过</el-button>
+            <el-button type="danger" size="small" @click="openReject(row.id)">驳回</el-button>
+          </template>
 
-  <!-- 已通过：只显示 驳回 -->
-  <template v-else-if="row.status === 'APPROVED'">
-    <el-button type="danger" size="small" @click="openReject(row.id)">驳回</el-button>
-  </template>
+          <!-- 已通过：只显示驳回（走弹窗） -->
+          <template v-else-if="row.status === 'APPROVED'">
+            <el-button type="danger" size="small" @click="openReject(row.id)">驳回</el-button>
+          </template>
 
-  <!-- 已驳回：只显示 通过 -->
-  <template v-else-if="row.status === 'SCHOOL_REJECTED'">
-    <el-button type="success" size="small" @click="approve(row.id)">通过</el-button>
-  </template>
-</div>
+          <!-- 已驳回：只显示通过（现在也走弹窗确认） -->
+          <template v-else-if="row.status === 'SCHOOL_REJECTED'">
+            <el-button type="success" size="small" @click="approve(row.id)">通过</el-button>
+          </template>
+        </div>
       </div>
 
-      <!-- 空状态（完全保留原代码） -->
+      <!-- 空状态 -->
       <div v-if="rows.length === 0 && !loading" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          <path
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
         <p>暂无审核任务</p>
       </div>
     </div>
 
-    <!-- 分页（完全保留原代码） -->
+    <!-- 分页 -->
     <div class="pagination-bar">
-      <el-pagination
-        background
-        layout="total, prev, pager, next"
-        :total="page.total"
-        v-model:current-page="page.pageNo"
-        v-model:page-size="page.pageSize"
-        @change="load"
-      />
+      <el-pagination background layout="total, prev, pager, next" :total="page.total" v-model:current-page="page.pageNo"
+        v-model:page-size="page.pageSize" @change="load" />
     </div>
 
-    <!-- 详情抽屉（完全保留原代码） -->
+    <!-- 详情抽屉 -->
     <el-drawer v-model="detailOpen" title="审核详情" size="50%" class="detail-drawer">
       <div class="detail-section" v-if="current">
         <div class="detail-header">
           <h3>{{ current.projectName || '未命名项目' }}</h3>
-          <span :class="['detail-status', current.status === 'APPROVED' ? 'approved' : current.status === 'SCHOOL_REJECTED' ? 'rejected' : 'pending']">
-            {{ current.status === 'APPROVED' ? '已通过' : current.status === 'SCHOOL_REJECTED' ? '已驳回' : '待审核' }}
+          <span
+            :class="['detail-status', current.status === 'APPROVED' ? 'approved' : current.status === 'SCHOOL_REJECTED' ? 'rejected' : 'pending']">
+            {{ labelRecordStatus(current.status) }}
           </span>
         </div>
 
@@ -459,11 +481,13 @@ onMounted(async () => {
               <div class="timeline-dot"></div>
               <div class="timeline-content">
                 <div class="timeline-header">
-                  <span class="timeline-action">{{ l.nodeType }} / {{ l.actionType }}</span>
+                  <span class="timeline-action">{{ labelAuditNodeType(l.nodeType) }} / {{
+                    labelAuditActionType(l.actionType)
+                    }}</span>
                   <span class="timeline-time">{{ l.createdAt }}</span>
                 </div>
                 <div class="timeline-status">
-                  {{ l.fromStatus }} → {{ l.toStatus }}
+                  {{ labelRecordStatus(l.fromStatus) }} → {{ labelRecordStatus(l.toStatus) }}
                 </div>
                 <div v-if="l.commentText" class="timeline-comment">
                   意见：{{ l.commentText }}
@@ -475,9 +499,18 @@ onMounted(async () => {
         </div>
 
         <!-- 操作按钮 -->
-        <div class="detail-actions" v-if="current.status === 'PENDING_SCHOOL'">
-          <el-button type="success" @click="approve(current.id)">通过</el-button>
-          <el-button type="danger" @click="openReject(current.id)">驳回</el-button>
+
+        <div class="detail-actions">
+          <template v-if="current?.status === 'PENDING_SCHOOL'">
+            <el-button type="success" @click="approve(current.id)">通过</el-button>
+            <el-button type="danger" @click="openReject(current.id)">驳回</el-button>
+          </template>
+          <template v-else-if="current?.status === 'APPROVED'">
+            <el-button type="danger" @click="openReject(current.id)">驳回</el-button>
+          </template>
+          <template v-else-if="current?.status === 'SCHOOL_REJECTED'">
+            <el-button type="success" @click="approve(current.id)">通过</el-button>
+          </template>
         </div>
       </div>
     </el-drawer>
@@ -486,12 +519,7 @@ onMounted(async () => {
     <el-dialog v-model="rejectOpen" title="驳回申请" width="480px" class="reject-dialog">
       <div class="reject-form">
         <label>驳回原因</label>
-        <el-input 
-          v-model="rejectForm.comment" 
-          type="textarea" 
-          :rows="4" 
-          placeholder="请输入驳回原因，将返回给学生修改"
-        />
+        <el-input v-model="rejectForm.comment" type="textarea" :rows="4" placeholder="请输入驳回原因，将返回给学生修改" />
       </div>
       <template #footer>
         <el-button @click="rejectOpen = false">取消</el-button>
@@ -685,12 +713,14 @@ onMounted(async () => {
   min-width: 0;
   padding: 0 4px;
 }
+
 .task-col-action {
   display: flex;
   gap: 6px;
   justify-content: center;
   align-items: center;
 }
+
 .td-center {
   justify-content: center;
   text-align: center;

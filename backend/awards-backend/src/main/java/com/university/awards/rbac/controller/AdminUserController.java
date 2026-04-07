@@ -283,6 +283,23 @@ public class AdminUserController {
         return ApiResponse.ok(null);
     }
 
+    /**
+     * 删除用户（仅停用状态可删除；先删角色关联再删用户）。
+     */
+    @DeleteMapping("/users/{id}")
+    public ApiResponse<Void> deleteUser(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        SysUser u = userMapper.selectById(id);
+        if (u == null) throw new BizException(404, "用户不存在");
+        guardTargetSysAdmin(id);
+        if (u.getEnabled() != null && u.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的用户不能删除，请先停用");
+        }
+        userRoleMapper.delete(new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        userMapper.deleteById(id);
+        return ApiResponse.ok(null);
+    }
+
     // ---------------- helpers ----------------
 
     private Map<Long, List<String>> getRoleCodesByUsers(List<Long> userIds) {

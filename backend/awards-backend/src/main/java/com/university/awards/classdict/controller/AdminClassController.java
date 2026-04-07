@@ -7,6 +7,8 @@ import com.university.awards.classdict.service.DictClassService;
 import com.university.awards.common.ApiResponse;
 import com.university.awards.common.BizException;
 import com.university.awards.common.PageResult;
+import com.university.awards.rbac.entity.SysUser;
+import com.university.awards.rbac.mapper.SysUserMapper;
 import com.university.awards.rbac.service.AuthzService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -28,6 +30,7 @@ public class AdminClassController {
 
     private final DictClassService classService;
     private final AuthzService authz;
+    private final SysUserMapper userMapper;
 
     /**
      * 班级分页查询（支持院系/启停/名称关键字过滤）。
@@ -102,6 +105,26 @@ public class AdminClassController {
         if (e == null) return ApiResponse.ok(null);
         e.setEnabled(e.getEnabled() != null && e.getEnabled() == 1 ? 0 : 1);
         classService.updateById(e);
+        return ApiResponse.ok(null);
+    }
+
+    /**
+     * 删除班级（仅停用状态可删除；仍有学生绑定该班级时不允许删除）。
+     */
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        DictClass e = classService.getById(id);
+        if (e == null)
+            return ApiResponse.ok(null);
+        if (e.getEnabled() != null && e.getEnabled() == 1) {
+            return ApiResponse.fail(1, "启用状态的班级不能删除，请先停用");
+        }
+        long users = userMapper.selectCount(new LambdaQueryWrapper<SysUser>().eq(SysUser::getClassId, id));
+        if (users > 0) {
+            return ApiResponse.fail(1, "仍有学生绑定该班级，无法删除");
+        }
+        classService.removeById(id);
         return ApiResponse.ok(null);
     }
 

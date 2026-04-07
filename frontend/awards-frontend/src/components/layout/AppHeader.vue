@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../../stores/user";
+import { labelRoleCode } from "../../utils/displayLabels";
 
 const router = useRouter();
 const user = useUserStore();
@@ -24,13 +25,7 @@ const avatarInitial = computed(() => {
 const roleLabel = computed(() => {
   if (!user.me?.roles?.length) return ''
   const role = user.me.roles[0]
-  switch (role) {
-    case 'SYS_ADMIN': return '系统管理员'
-    case 'SCHOOL_ADMIN': return '校级管理员'
-    case 'DEPT_ADMIN': return '院系管理员'
-    case 'CAPTAIN': return '队长'
-    default: return role
-  }
+  return labelRoleCode(role)
 });
 
 async function logout() {
@@ -53,7 +48,7 @@ async function logout() {
         </div>
         <div class="brand-text">
           <h1 class="brand-title">竞赛获奖管理系统</h1>
-          <span class="brand-subtitle">Awards Management Platform</span>
+          <span class="brand-subtitle">竞赛获奖管理平台</span>
         </div>
       </div>
     </div>

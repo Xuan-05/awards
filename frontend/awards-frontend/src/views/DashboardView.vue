@@ -59,7 +59,7 @@ function renderCharts() {
         axisLabel: { interval: 0, rotate: 30 },
       },
       yAxis: { type: 'value' },
-      series: [{ name: '待审核', type: 'bar', data: metrics.value.pendingByDept.map((d) => d.pendingCount) }],
+      series: [{ name: '待校级审核', type: 'bar', data: metrics.value.pendingByDept.map((d) => d.pendingCount) }],
     })
   }
 }
@@ -109,7 +109,7 @@ onMounted(async () => {
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ summary?.pendingAuditCount ?? '-' }}</div>
-          <div class="stat-label">待审核</div>
+          <div class="stat-label">待校级审核</div>
         </div>
       </div>
 
@@ -122,7 +122,7 @@ onMounted(async () => {
         </div>
         <div class="stat-content">
           <div class="stat-value">{{ summary?.approvedCount ?? '-' }}</div>
-          <div class="stat-label">已通过</div>
+          <div class="stat-label">审核通过</div>
         </div>
       </div>
     </div>
@@ -138,7 +138,7 @@ onMounted(async () => {
 
       <div class="chart-card">
         <div class="chart-header">
-          <h3 class="chart-title">各院系待审核分布</h3>
+          <h3 class="chart-title">各院系待校级审核分布</h3>
           <span class="chart-badge">Top 20</span>
         </div>
         <div ref="deptEl" class="chart-container" />

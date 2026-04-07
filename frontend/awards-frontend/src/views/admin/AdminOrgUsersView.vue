@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, nextTick } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { http } from "../../api/http";
 import { useUserStore } from "../../stores/user";
 import type { ApiResponse, PageResult } from "../../types/api";
 import { labelRoleCode, labelUserType } from "../../utils/displayLabels";
+import { ElTable } from "element-plus";
+import type { ElTable as ElTableType } from "element-plus";
 
 type Dept = {
   id: number;
@@ -35,9 +37,10 @@ type UserRow = {
   roles: string[];
 };
 
+const tableRef = ref<InstanceType<typeof ElTable> | null>(null);
+const renderKey = ref(0)
 const userStore = useUserStore();
 const isSysAdmin = computed(() => userStore.hasAnyRole("SYS_ADMIN"));
-
 const deptsLoading = ref(false);
 const depts = ref<Dept[]>([]);
 const selectedDeptId = ref<number | undefined | 0>(undefined);
@@ -57,7 +60,6 @@ const query = reactive({
   teacherNo: "",
 });
 const rows = ref<UserRow[]>([]);
-
 const rolesLoading = ref(false);
 const roles = ref<Role[]>([]);
 const classesLoading = ref(false);
@@ -257,12 +259,15 @@ async function openProfileDialog(row: UserRow) {
   profileForm.classId = row.classId;
   profileForm.studentNo = row.studentNo || "";
   profileForm.teacherNo = row.teacherNo || "";
+
   if (row.userType === "STUDENT") {
     await loadClasses(row.deptId);
   } else {
     classes.value = [];
   }
+
   profileDialogOpen.value = true;
+  renderKey.value++;
 }
 
 async function onProfileDeptChanged() {
@@ -330,7 +335,7 @@ onMounted(async () => {
       <div class="search-actions">
         <el-button type="primary" @click="
           page.pageNo = 1;
-          loadUsers();
+        loadUsers();
         ">查询</el-button>
         <el-button @click="refresh">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -353,23 +358,29 @@ onMounted(async () => {
     </div>
 
     <div class="user-table" v-loading="loading">
-      <el-table :data="rows" style="width: 100%">
-        <el-table-column prop="id" label="编号" width="70" align="center" />
-        <el-table-column prop="username" label="账号" width="124" align="center" />
-        <el-table-column prop="realName" label="姓名" width="93" align="center" />
-        <el-table-column prop="userType" label="类型" width="93" align="center">
+      <el-table 
+        ref="tableRef" 
+        :data="rows" 
+        style="width: 100%" 
+        :key="renderKey"
+        :fit="false"
+      >
+        <el-table-column prop="id" label="编号" width="70" align="center" show-overflow-tooltip />
+        <el-table-column prop="username" label="账号" width="124" align="center" show-overflow-tooltip />
+        <el-table-column prop="realName" label="姓名" width="93" align="center" show-overflow-tooltip />
+        <el-table-column prop="userType" label="类型" width="93" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="type-tag" :class="row.userType.toLowerCase()">{{
               labelUserType(row.userType)
             }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="院系" width="130" align="center">
+        <el-table-column label="院系" width="130" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             {{ deptNameById[row.deptId] || `ID:${row.deptId}` }}
           </template>
         </el-table-column>
-        <el-table-column label="班级" width="100" align="center">
+        <el-table-column label="班级" width="100" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.userType === 'STUDENT'">
               {{ row.classId ? (classNameById[row.classId] || `ID:${row.classId}`) : '-' }}
@@ -377,7 +388,7 @@ onMounted(async () => {
             <span v-else class="text-muted">-</span>
           </template>
         </el-table-column>
-        <el-table-column label="学号/工号" width="120" align="center">
+        <el-table-column label="学号/工号" width="120" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.userType === 'STUDENT'">{{ row.studentNo || '-' }}</span>
             <span v-else-if="row.userType === 'TEACHER'">{{ row.teacherNo || '-' }}</span>
@@ -385,7 +396,7 @@ onMounted(async () => {
           </template>
         </el-table-column>
 
-        <el-table-column prop="enabled" label="状态" width="86" align="center">
+        <el-table-column prop="enabled" label="状态" width="86" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span :style="row.enabled === 1 ? 'color:#00C48B;font-weight:500' : 'color:#999'">
               {{ row.enabled === 1 ? '启用' : '停用' }}
@@ -393,7 +404,7 @@ onMounted(async () => {
           </template>
         </el-table-column>
 
-        <el-table-column label="角色" width="130" align="center">
+        <el-table-column label="角色" width="130" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <template v-if="row.roles && row.roles.length > 0">
               <span v-for="r in row.roles" :key="r" class="role-tag">
@@ -404,13 +415,13 @@ onMounted(async () => {
           </template>
         </el-table-column>
 
-        <el-table-column label="资料" width="74" align="center">
+        <el-table-column label="资料" width="74" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-button size="small" text @click="openProfileDialog(row)">详情</el-button>
           </template>
         </el-table-column>
 
-        <el-table-column label="操作" width="320" fixed="right" align="center">
+        <el-table-column label="操作" width="320" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <el-button size="small" text :disabled="!canOperate(row)" @click="openRoleDialog(row)">
               选择角色
@@ -419,27 +430,20 @@ onMounted(async () => {
               重置密码
             </el-button>
             <el-button size="small" text type="warning" :disabled="!canOperate(row)" @click="toggleUser(row)">
-              {{ row.enabled === 1 ? '停用' : '启用' }}
+              {{ row.enabled === 1 ? "停用" : "启用" }}
             </el-button>
           </template>
         </el-table-column>
       </el-table>
     </div>
 
-    <!-- 分页：和第一个页面完全一致 -->
     <div class="pagination-bar">
-      <el-pagination
-        background
-        layout="total, prev, pager, next, sizes"
-        :total="page.total"
-        v-model:current-page="page.pageNo"
-        v-model:page-size="page.pageSize"
-        @current-change="loadUsers"
-        @size-change="loadUsers"
-      />
+      <el-pagination background layout="total, prev, pager, next, sizes" :total="page.total"
+        v-model:current-page="page.pageNo" v-model:page-size="page.pageSize" @current-change="loadUsers"
+        @size-change="loadUsers" />
     </div>
 
-    <el-dialog v-model="roleDialogOpen" title="选择角色" width="400px">
+    <el-dialog v-model="roleDialogOpen" title="选择角色" width="400px" :append-to-body="true" @closed="renderKey++">
       <el-select v-model="selectedRoleCode" placeholder="请选择" style="width:100%">
         <el-option label="无" :value="''" />
         <el-option v-for="r in roles" :key="r.roleCode" :label="r.roleName" :value="r.roleCode" />
@@ -450,7 +454,13 @@ onMounted(async () => {
       </template>
     </el-dialog>
 
-    <el-dialog v-model="profileDialogOpen" title="用户详情" width="520px">
+    <el-dialog 
+      v-model="profileDialogOpen" 
+      title="用户详情" 
+      width="520px"
+      :append-to-body="true"
+      @closed="renderKey++"
+    >
       <div class="dialog-user-info">
         <span class="dialog-user-name">{{ profileEditing?.realName }}</span>
         <span class="dialog-user-account">{{ profileEditing?.username }}</span>
@@ -585,7 +595,7 @@ onMounted(async () => {
 
 .type-tag.admin {
   background: rgba(255, 149, 0, 0.1);
-  color: #ff9500;
+  color: #bca638;
 }
 
 .text-muted {

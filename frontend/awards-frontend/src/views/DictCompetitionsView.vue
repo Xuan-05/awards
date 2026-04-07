@@ -31,10 +31,12 @@ const rows = ref<Row[]>([])
 const categories = ref<Category[]>([])
 const organizers = ref<Organizer[]>([])
 
+// 分类名称映射
 const catName = computed(() => {
   const m = new Map(categories.value.map((c) => [c.id, c.categoryName] as const))
   return (id: number) => m.get(id) || String(id)
 })
+// 主办方名称映射
 const orgName = computed(() => {
   const m = new Map(organizers.value.map((o) => [o.id, o.organizerName] as const))
   return (row: Row) => {
@@ -44,6 +46,7 @@ const orgName = computed(() => {
   }
 })
 
+// 加载分类、主办方基础数据
 async function loadBase() {
   const [c, o] = await Promise.all([
     http.get<ApiResponse<PageResult<Category>>>('/dicts/categories', { params: { pageNo: 1, pageSize: 200, enabled: 1 } }),
@@ -55,6 +58,7 @@ async function loadBase() {
   organizers.value = o.data.data.list
 }
 
+// 加载竞赛列表
 async function load() {
   loading.value = true
   try {
@@ -81,6 +85,7 @@ const form = reactive({
   remark: '',
 })
 
+// 打开新增弹窗
 function openCreate() {
   editingId.value = null
   form.competitionName = ''
@@ -92,6 +97,7 @@ function openCreate() {
   form.remark = ''
   dialogOpen.value = true
 }
+// 打开编辑弹窗
 function openEdit(row: Row) {
   editingId.value = row.id
   form.competitionName = row.competitionName
@@ -104,6 +110,7 @@ function openEdit(row: Row) {
   dialogOpen.value = true
 }
 
+// 保存/新增竞赛
 async function save() {
   if (!form.competitionName || !form.categoryId) {
     ElMessage.error('请把必填项补齐')
@@ -131,11 +138,19 @@ async function save() {
   await load()
 }
 
+// 切换启用/停用
 async function toggle(row: Row) {
   const resp = await http.post<ApiResponse<null>>(`/dicts/competitions/${row.id}/toggle`)
   if (resp.data.code !== 0) throw new Error(resp.data.message)
   ElMessage.success('已切换')
   await load()
+}
+
+// 切换分类
+function switchCategory(id: number | undefined) {
+  query.categoryId = id
+  page.pageNo = 1 // 切换分类重置页码
+  load()
 }
 
 onMounted(async () => {
@@ -152,118 +167,110 @@ onMounted(async () => {
       <p class="page-subtitle">竞赛项目基础数据管理</p>
     </div>
 
-    <div class="dict-layout">
-      <!-- 左侧分类导航 -->
-      <div class="category-nav">
-        <div class="nav-header">
-          <h3>竞赛类别</h3>
-          <el-button text size="small" @click="query.categoryId = undefined; load()">全部</el-button>
+    <!-- 顶部横向分类导航（替代原左侧栏） -->
+    <div class="category-tabs">
+      <div 
+        class="tab-item"
+        :class="{ active: query.categoryId === undefined }"
+        @click="switchCategory(undefined)"
+      >
+        全部
+      </div>
+      <div 
+        v-for="cat in categories" 
+        :key="cat.id" 
+        class="tab-item"
+        :class="{ active: query.categoryId === cat.id }"
+        @click="switchCategory(cat.id)"
+      >
+        {{ cat.categoryName }}
+      </div>
+    </div>
+
+    <!-- 内容区 -->
+    <div class="content-area">
+      <!-- 工具栏 -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <el-select v-model="query.enabled" placeholder="状态" clearable class="status-select" @change="load">
+            <el-option label="启用" :value="1" />
+            <el-option label="停用" :value="0" />
+          </el-select>
         </div>
-        <div class="nav-list">
-          <div 
-            v-for="cat in categories" 
-            :key="cat.id" 
-            class="nav-item"
-            :class="{ active: query.categoryId === cat.id }"
-            @click="query.categoryId = cat.id; load()"
-          >
-            <div class="nav-item-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
-                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-            </div>
-            <span class="nav-item-label">{{ cat.categoryName }}</span>
-            <span class="nav-item-count" v-if="query.categoryId === cat.id">●</span>
-          </div>
+        <div class="toolbar-right">
+          <el-button @click="load">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
+              <path d="M23 4v6h-6M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            刷新
+          </el-button>
+          <el-button type="primary" @click="openCreate">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            新增竞赛
+          </el-button>
         </div>
       </div>
 
-      <!-- 右侧内容区 -->
-      <div class="content-area">
-        <!-- 工具栏 -->
-        <div class="toolbar">
-          <div class="toolbar-left">
-            <el-select v-model="query.enabled" placeholder="状态" clearable class="status-select" @change="load">
-              <el-option label="启用" :value="1" />
-              <el-option label="停用" :value="0" />
-            </el-select>
-          </div>
-          <div class="toolbar-right">
-            <el-button @click="load">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
-                <path d="M23 4v6h-6M1 20v-6h6"/>
-                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-              </svg>
-              刷新
-            </el-button>
-            <el-button type="primary" @click="openCreate">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
-                <line x1="12" y1="5" x2="12" y2="19"/>
-                <line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              新增竞赛
-            </el-button>
-          </div>
-        </div>
+      <!-- 数据表格 -->
+      <div class="table-card" v-loading="loading">
+        <el-table :data="rows" style="width: 100%">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column prop="competitionName" label="竞赛名称" min-width="220">
+            <template #default="{ row }">
+              <div class="comp-name">
+                <span class="comp-full">{{ row.competitionName }}</span>
+                <span v-if="row.competitionShortName" class="comp-short">{{ row.competitionShortName }}</span>
+              </div>
+            </template>
+          </el-table-column>
+          <el-table-column prop="categoryId" label="类别" width="140">
+            <template #default="{ row }">
+              <span class="cat-badge">{{ catName(row.categoryId) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="organizerId" label="主办方" width="180">
+            <template #default="{ row }">
+              <span class="org-text">{{ orgName(row) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="defaultLevel" label="默认级别" width="100">
+            <template #default="{ row }">
+              <span v-if="row.defaultLevel" class="level-tag">{{ row.defaultLevel }}</span>
+              <span v-else class="text-muted">-</span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="enabled" label="状态" width="90">
+            <template #default="{ row }">
+              <span class="status-indicator" :class="row.enabled === 1 ? 'active' : 'inactive'">
+                {{ row.enabled === 1 ? '启用' : '停用' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sortNo" label="排序" width="70" />
+          <el-table-column label="操作" width="160" fixed="right">
+            <template #default="{ row }">
+              <el-button size="small" text @click="openEdit(row)">编辑</el-button>
+              <el-button size="small" text :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
+                {{ row.enabled === 1 ? '停用' : '启用' }}
+              </el-button>
+            </template>
+          </el-table-column>
+        </el-table>
 
-        <!-- 数据表格 -->
-        <div class="table-card" v-loading="loading">
-          <el-table :data="rows" style="width: 100%">
-            <el-table-column prop="id" label="ID" width="70" />
-            <el-table-column prop="competitionName" label="竞赛名称" min-width="220">
-              <template #default="{ row }">
-                <div class="comp-name">
-                  <span class="comp-full">{{ row.competitionName }}</span>
-                  <span v-if="row.competitionShortName" class="comp-short">{{ row.competitionShortName }}</span>
-                </div>
-              </template>
-            </el-table-column>
-            <el-table-column prop="categoryId" label="类别" width="140">
-              <template #default="{ row }">
-                <span class="cat-badge">{{ catName(row.categoryId) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="organizerId" label="主办方" width="180">
-              <template #default="{ row }">
-                <span class="org-text">{{ orgName(row) }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="defaultLevel" label="默认级别" width="100">
-              <template #default="{ row }">
-                <span v-if="row.defaultLevel" class="level-tag">{{ row.defaultLevel }}</span>
-                <span v-else class="text-muted">-</span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="enabled" label="状态" width="90">
-              <template #default="{ row }">
-                <span class="status-indicator" :class="row.enabled === 1 ? 'active' : 'inactive'">
-                  {{ row.enabled === 1 ? '启用' : '停用' }}
-                </span>
-              </template>
-            </el-table-column>
-            <el-table-column prop="sortNo" label="排序" width="70" />
-            <el-table-column label="操作" width="160" fixed="right">
-              <template #default="{ row }">
-                <el-button size="small" text @click="openEdit(row)">编辑</el-button>
-                <el-button size="small" text :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
-                  {{ row.enabled === 1 ? '停用' : '启用' }}
-                </el-button>
-              </template>
-            </el-table-column>
-          </el-table>
-
-          <div class="table-footer">
-            <el-pagination
-              background
-              layout="total, prev, pager, next"
-              :total="page.total"
-              :current-page="page.pageNo"
-              :page-size="page.pageSize"
-              @update:current-page="(v) => (page.pageNo = v)"
-              @change="load"
-            />
-          </div>
+        <div class="table-footer">
+          <el-pagination
+            background
+            layout="total, prev, pager, next"
+            :total="page.total"
+            :current-page="page.pageNo"
+            :page-size="page.pageSize"
+            @update:current-page="(v) => (page.pageNo = v)"
+            @change="load"
+          />
         </div>
       </div>
     </div>
@@ -318,7 +325,7 @@ onMounted(async () => {
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .page-title {
@@ -335,105 +342,46 @@ onMounted(async () => {
   margin: 0;
 }
 
-.dict-layout {
+/* 顶部横向分类标签栏（核心修改） */
+.category-tabs {
   display: flex;
-  gap: 16px;
-  min-height: calc(100vh - 180px);
-}
-
-/* Category Navigation */
-.category-nav {
-  width: 220px;
-  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
   background: var(--apple-glass);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--apple-border);
   border-radius: var(--apple-radius-lg);
-  display: flex;
-  flex-direction: column;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.category-tabs::-webkit-scrollbar {
+  display: none;
 }
 
-.nav-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid var(--apple-border);
-}
-
-.nav-header h3 {
+.tab-item {
+  padding: 8px 20px;
+  border-radius: 20px;
   font-size: 14px;
-  font-weight: 600;
-  color: var(--apple-text);
-  margin: 0;
-}
-
-.nav-list {
-  flex: 1;
-  overflow: auto;
-  padding: 8px;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: var(--apple-radius);
+  font-weight: 500;
+  color: var(--apple-text-secondary);
   cursor: pointer;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-  margin-bottom: 4px;
-}
-
-.nav-item:hover {
-  background: var(--apple-bg-secondary);
-}
-
-.nav-item.active {
-  background: rgba(0, 122, 255, 0.1);
-}
-
-.nav-item-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  background: var(--apple-bg-secondary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.nav-item.active .nav-item-icon {
-  background: var(--apple-primary);
-  color: white;
-}
-
-.nav-item-icon svg {
-  width: 14px;
-  height: 14px;
-}
-
-.nav-item-label {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--apple-text);
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.nav-item-count {
-  font-size: 8px;
-  color: var(--apple-primary);
+.tab-item:hover {
+  background: var(--apple-bg-secondary);
+  color: var(--apple-text);
+}
+.tab-item.active {
+  background: var(--apple-primary);
+  color: #fff;
 }
 
-/* Content Area */
+/* 内容区 */
 .content-area {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -607,4 +555,3 @@ onMounted(async () => {
   color: var(--apple-text);
 }
 </style>
-

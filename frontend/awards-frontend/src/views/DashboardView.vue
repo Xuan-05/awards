@@ -251,7 +251,6 @@ onMounted(async () => {
   gap: 16px;
   margin-bottom: 24px;
 }
-
 .stat-card {
   background: var(--apple-glass);
   backdrop-filter: blur(20px) saturate(180%);
@@ -372,22 +371,36 @@ onMounted(async () => {
   border-radius: var(--apple-radius-lg);
   padding: 20px;
 
-  width: 70%;
-  max-width: 800px;
-  margin: 0 auto;
+  /* 占满上层模块：移除最大宽度限制 */
+  width: 100%;
+  max-width: none;
+  margin: 0;
   box-sizing: border-box;
+
+  /* 内容横向并排布局 */
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap; 
+  gap: 16px; 
+  align-items: center; 
 }
 .shortcuts-title {
   font-size: 15px;
   font-weight: 600;
   color: var(--apple-text);
-  margin: 0 0 16px 0;
+  /* 定位到卡片左上角 */
+  position: absolute;
+  top: 20px;    /* 距离顶部内边距 */
+  left: 20px;   /* 距离左侧内边距 */
+  margin: 0;    /* 清除原来的负边距 */
 }
 
 .shortcuts-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr); 
-  gap: 12px;
+  grid-template-columns: repeat(6, 1fr); 
+  gap: 50px;
+  padding-left: 24px;
+    padding-top: 25px;
 }
 
 .shortcut-item {

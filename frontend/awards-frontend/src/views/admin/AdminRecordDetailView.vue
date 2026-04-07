@@ -191,8 +191,6 @@ async function loadLogs(id: number) {
   }
 }
 
-
-
 const captainMember = computed(() => members.value.find((x) => x.isCaptain === 1));
 
 onMounted(async () => {
@@ -218,8 +216,12 @@ onMounted(async () => {
 
 <template>
   <div class="admin-record-detail" v-loading="loading">
-    <div class="page-toolbar">
-      <el-button @click="backToList">返回审核列表</el-button>
+    <!-- 带箭头的返回栏 -->
+    <div class="page-header">
+      <button type="button" class="back-btn" @click="backToList">
+        <span class="back-icon">&larr;</span>
+        <span>返回审核列表</span>
+      </button>
     </div>
 
     <template v-if="record">
@@ -272,7 +274,7 @@ onMounted(async () => {
             <div class="info-cell"><span class="label">状态</span><span class="value">{{ labelTeamStatus(team.status) }}</span></div>
           </div>
           <h3 class="sub-title">成员列表</h3>
-          <el-table :data="members" size="small" border empty-text="暂无成员">
+          <el-table :data="members" size="small" border empty-text="暂无成员" style="width: 100%">
             <el-table-column label="姓名" min-width="120">
               <template #default="{ row }">{{ row.user?.realName ?? `用户 #${row.userId}` }}</template>
             </el-table-column>
@@ -287,7 +289,7 @@ onMounted(async () => {
             </el-table-column>
           </el-table>
           <h3 class="sub-title">指导教师</h3>
-          <el-table :data="teachers" size="small" border empty-text="暂无指导教师">
+          <el-table :data="teachers" size="small" border empty-text="暂无指导教师" style="width: 100%">
             <el-table-column label="姓名" min-width="120">
               <template #default="{ row }">{{ row.user?.realName ?? `用户 #${row.teacherUserId}` }}</template>
             </el-table-column>
@@ -336,51 +338,239 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.admin-record-detail { max-width: 960px; }
-.page-toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+.admin-record-detail {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 新增：带箭头的返回栏样式 */
+.page-header {
+  margin-bottom: 20px;
+}
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.back-btn:hover {
+  background: var(--el-fill-color-lighter);
+  border-color: var(--el-color-primary);
+  color: var(--el-color-primary);
+}
+.back-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
 .detail-header {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-  margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--apple-border);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--el-border-color);
 }
-.page-title { font-size: 22px; font-weight: 700; color: var(--apple-text); margin: 0; letter-spacing: -0.3px; }
-.status-pill { flex-shrink: 0; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 6px; }
-.status-pill.pending { background: rgba(255, 149, 0, 0.12); color: var(--apple-warning); }
-.status-pill.ok { background: rgba(52, 199, 89, 0.12); color: var(--apple-success); }
-.status-pill.rej { background: rgba(255, 59, 48, 0.12); color: var(--apple-danger); }
-.block { margin-bottom: 28px; }
-.block-title { font-size: 15px; font-weight: 600; color: var(--apple-text); margin: 0 0 12px 0; }
-.sub-title { font-size: 13px; font-weight: 600; color: var(--apple-text-secondary); margin: 16px 0 8px 0; }
-.info-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; }
-.info-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.info-cell.full { grid-column: 1 / -1; }
-.info-cell .label { font-size: 12px; color: var(--apple-text-secondary); }
-.info-cell .value { font-size: 14px; font-weight: 500; color: var(--apple-text); word-break: break-word; }
-.file-list { background: var(--apple-bg-secondary); border-radius: var(--apple-radius); padding: 12px; }
-.file-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 6px; }
-.file-row:hover { background: var(--apple-bg-tertiary); }
+.page-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--el-text-color-primary);
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+.status-pill {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+.status-pill.pending {
+  background: rgba(255, 149, 0, 0.12);
+  color: #ff9500;
+}
+.status-pill.ok {
+  background: rgba(52, 199, 89, 0.12);
+  color: #34c759;
+}
+.status-pill.rej {
+  background: rgba(255, 59, 48, 0.12);
+  color: #ff3b30;
+}
+
+.block {
+  margin-bottom: 28px;
+  padding: 20px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+.block-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+  margin: 0 0 16px 0;
+}
+.sub-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--el-text-color-secondary);
+  margin: 20px 0 12px 0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px 24px;
+}
+.info-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.info-cell.full {
+  grid-column: 1 / -1;
+}
+.info-cell .label {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+.info-cell .value {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+  word-break: break-word;
+}
+
+.file-list {
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+  padding: 12px;
+}
+.file-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.file-row:hover {
+  background: var(--el-fill-color-light);
+}
 .file-link {
-  background: none; border: none; padding: 0; font-size: 13px; font-weight: 500; color: var(--apple-primary);
-  cursor: pointer; text-decoration: underline; text-underline-offset: 2px; text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-align: left;
 }
-.muted { font-size: 13px; color: var(--apple-text-tertiary); margin: 0; }
-.timeline { position: relative; padding-left: 20px; }
-.timeline-item { position: relative; padding-bottom: 16px; }
-.timeline-item:last-child { padding-bottom: 0; }
+.muted {
+  font-size: 13px;
+  color: var(--el-text-color-tertiary);
+  margin: 0;
+  padding: 8px 12px;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 24px;
+}
+.timeline-item {
+  position: relative;
+  padding-bottom: 20px;
+}
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
 .timeline-dot {
-  position: absolute; left: -20px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--apple-primary);
+  position: absolute;
+  left: -24px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--el-color-primary);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px var(--el-color-primary-light-7);
 }
 .timeline-item::before {
-  content: ""; position: absolute; left: -16px; top: 14px; bottom: 0; width: 2px; background: var(--apple-border);
+  content: "";
+  position: absolute;
+  left: -19px;
+  top: 16px;
+  bottom: 0;
+  width: 2px;
+  background: var(--el-border-color);
 }
-.timeline-item:last-child::before { display: none; }
-.timeline-card { background: var(--apple-bg-secondary); border-radius: var(--apple-radius); padding: 10px 14px; }
+.timeline-item:last-child::before {
+  display: none;
+}
+.timeline-card {
+  background: var(--el-fill-color-lighter);
+  border-radius: 8px;
+  padding: 12px 16px;
+  transition: box-shadow 0.2s;
+}
+.timeline-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
 .timeline-head {
-  display: flex; justify-content: space-between; gap: 12px; font-size: 13px; font-weight: 600; color: var(--apple-text);
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
 }
-.timeline-head .time { font-weight: 400; font-size: 12px; color: var(--apple-text-tertiary); }
-.timeline-body { font-size: 12px; color: var(--apple-text-secondary); margin-top: 4px; }
+.timeline-head .time {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--el-text-color-tertiary);
+}
+.timeline-body {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 6px;
+}
 .timeline-comment {
-  font-size: 12px; color: var(--apple-text-secondary); margin-top: 8px;
-  padding: 8px 10px; background: var(--apple-bg-tertiary); border-radius: 6px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+}
+
+/* 适配Element Plus主题变量，保证多主题兼容 */
+:root {
+  --apple-border: var(--el-border-color);
+  --apple-text: var(--el-text-color-primary);
+  --apple-text-secondary: var(--el-text-color-secondary);
+  --apple-text-tertiary: var(--el-text-color-tertiary);
+  --apple-bg-secondary: var(--el-fill-color-lighter);
+  --apple-bg-tertiary: var(--el-fill-color-light);
+  --apple-primary: var(--el-color-primary);
+  --apple-warning: #ff9500;
+  --apple-success: #34c759;
+  --apple-danger: #ff3b30;
+  --apple-radius: 8px;
 }
 </style>

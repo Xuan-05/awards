@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '../api/http'
 
@@ -9,7 +9,9 @@ type Row = { id: number; scopeName: string; enabled: number; sortNo: number }
 
 const loading = ref(false)
 const page = reactive({ pageNo: 1, pageSize: 20, total: 0 })
-const query = reactive({ enabled: undefined as number | undefined })
+const query = reactive({
+  enabled: undefined as number | undefined,
+})
 const rows = ref<Row[]>([])
 
 async function load() {
@@ -28,7 +30,10 @@ async function load() {
 
 const dialogOpen = ref(false)
 const editingId = ref<number | null>(null)
-const form = reactive({ scopeName: '', sortNo: 0 })
+const form = reactive({
+  scopeName: '',
+  sortNo: 0,
+})
 
 function openCreate() {
   editingId.value = null
@@ -36,6 +41,7 @@ function openCreate() {
   form.sortNo = 0
   dialogOpen.value = true
 }
+
 function openEdit(row: Row) {
   editingId.value = row.id
   form.scopeName = row.scopeName
@@ -45,15 +51,19 @@ function openEdit(row: Row) {
 
 async function save() {
   if (!form.scopeName) {
-    ElMessage.error('请填写名称')
+    ElMessage.error('请把必填项补齐')
     return
   }
+  const payload = {
+    scopeName: form.scopeName,
+    sortNo: form.sortNo ?? 0,
+  }
   if (editingId.value) {
-    const resp = await http.put<ApiResponse<null>>(`/dicts/award-scopes/${editingId.value}`, form)
+    const resp = await http.put<ApiResponse<null>>(`/dicts/award-scopes/${editingId.value}`, payload)
     if (resp.data.code !== 0) throw new Error(resp.data.message)
     ElMessage.success('已保存')
   } else {
-    const resp = await http.post<ApiResponse<number>>('/dicts/award-scopes', form)
+    const resp = await http.post<ApiResponse<number>>('/dicts/award-scopes', payload)
     if (resp.data.code !== 0) throw new Error(resp.data.message)
     ElMessage.success('已创建')
   }
@@ -84,71 +94,277 @@ async function remove(row: Row) {
   await load()
 }
 
-onMounted(load)
+onMounted(() => {
+  load()
+})
 </script>
 
 <template>
-  <el-space direction="vertical" alignment="start" size="large" style="width: 100%">
-    <el-card style="width: 100%">
-      <el-form inline>
-        <el-form-item label="状态">
-          <el-select v-model="query.enabled" style="width: 180px" @change="load" clearable placeholder="全部">
-            <el-option label="启用" :value="1" />
-            <el-option label="停用" :value="0" />
-          </el-select>
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" @click="openCreate">新增</el-button>
-          <el-button @click="load">刷新</el-button>
-        </el-form-item>
-      </el-form>
-    </el-card>
+  <div class="dict-page">
+    <!-- 页面标题 -->
+    <div class="page-header">
+      <h1 class="page-title">获奖范围库</h1>
+      <p class="page-subtitle">获奖范围基础数据管理</p>
+    </div>
 
-    <el-card style="width: 100%">
-      <el-table :data="rows" v-loading="loading" style="width: 100%">
-        <el-table-column prop="id" label="编号" width="80" />
-        <el-table-column prop="scopeName" label="名称" />
-        <el-table-column prop="enabled" label="启用" width="100">
-          <template #default="{ row }">
-            <el-tag :type="row.enabled === 1 ? 'success' : 'info'">{{ row.enabled === 1 ? '启用' : '停用' }}</el-tag>
-          </template>
-        </el-table-column>
-        <el-table-column prop="sortNo" label="排序" width="100" />
-        <el-table-column label="操作" width="240">
-          <template #default="{ row }">
-            <el-button size="small" type="primary" plain @click="openEdit(row)">编辑</el-button>
-            <el-button size="small" type="warning" @click="toggle(row)">{{ row.enabled === 1 ? '停用' : '启用' }}</el-button>
-            <el-button v-if="row.enabled === 0" size="small" type="danger" @click="remove(row)">删除</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
+    <!-- 顶部工具栏 -->
+    <div class="top-toolbar">
+      <div class="category-tabs" />
 
-      <div style="display: flex; justify-content: flex-end; margin-top: 12px">
-        <el-pagination
-          background
-          layout="total, prev, pager, next, sizes"
-          :total="page.total"
-          v-model:current-page="page.pageNo"
-          v-model:page-size="page.pageSize"
-          @change="load"
-        />
+      <!-- 右侧筛选+按钮 -->
+      <div class="toolbar-right">
+        <el-select v-model="query.enabled" placeholder="状态" clearable class="status-select" @change="load">
+          <el-option label="启用" :value="1" />
+          <el-option label="停用" :value="0" />
+        </el-select>
+        <el-button @click="page.pageNo = 1; query.enabled = undefined; load()"> <svg viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px; margin-right: 6px;">
+            <path d="M23 4v6h-6M1 20v-6h6" />
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+          </svg>
+          刷新
+        </el-button>
+        <el-button type="primary" @click="openCreate">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            style="width: 16px; height: 16px; margin-right: 6px;">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          新增获奖范围
+        </el-button>
       </div>
-    </el-card>
+    </div>
 
-    <el-dialog v-model="dialogOpen" :title="editingId ? '编辑获奖范围' : '新增获奖范围'" width="520px">
-      <el-form label-width="90px">
-        <el-form-item label="名称" required>
-          <el-input v-model="form.scopeName" />
-        </el-form-item>
-        <el-form-item label="排序">
-          <el-input-number v-model="form.sortNo" :min="0" />
-        </el-form-item>
-      </el-form>
+    <!-- 内容区 -->
+    <div class="content-area">
+      <div class="table-card" v-loading="loading">
+        <el-table :data="rows" style="width: 100%">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column prop="scopeName" label="获奖范围名称" min-width="220" align="left" />
+          <el-table-column prop="enabled" label="状态" width="90" align="center">
+            <template #default="{ row }">
+              <span class="status-indicator" :class="row.enabled === 1 ? 'active' : 'inactive'">
+                {{ row.enabled === 1 ? '启用' : '停用' }}
+              </span>
+            </template>
+          </el-table-column>
+          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
+          <el-table-column label="操作" width="220" fixed="right" align="center">
+            <template #default="{ row }">
+              <el-button size="small" text @click="openEdit(row)">编辑</el-button>
+              <el-button size="small" text :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
+                {{ row.enabled === 1 ? '停用' : '启用' }}
+              </el-button>
+              <el-button v-if="row.enabled === 0" size="small" text type="danger" @click="remove(row)">删除</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+
+        <div class="table-footer">
+          <el-pagination background layout="total, prev, pager, next" :total="page.total"
+            v-model:current-page="page.pageNo" v-model:page-size="page.pageSize" @change="load" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑弹窗 -->
+    <el-dialog v-model="dialogOpen" :title="editingId ? '编辑获奖范围' : '新增获奖范围'" width="550px" class="apple-dialog">
+      <div class="form-grid">
+        <div class="form-item full">
+          <label>获奖范围名称 <span class="required">*</span></label>
+          <el-input v-model="form.scopeName" placeholder="请输入获奖范围名称" />
+        </div>
+        <div class="form-item">
+          <label>排序</label>
+          <el-input-number v-model="form.sortNo" :min="0" style="width: 100%" />
+        </div>
+      </div>
       <template #footer>
         <el-button @click="dialogOpen = false">取消</el-button>
         <el-button type="primary" @click="save">保存</el-button>
       </template>
     </el-dialog>
-  </el-space>
+  </div>
 </template>
 
+<style scoped>
+:root {
+  --apple-text: #1d1d1f;
+  --apple-text-secondary: #424245;
+  --apple-text-tertiary: #86868b;
+  --apple-bg-secondary: #f5f5f7;
+  --apple-border: rgba(0, 0, 0, 0.1);
+  --apple-border-light: rgba(0, 0, 0, 0.05);
+  --apple-primary: #007aff;
+  --apple-success: #34c759;
+  --apple-warning: #ff9500;
+  --apple-danger: #ff3b30;
+  --apple-radius-lg: 12px;
+  --apple-radius-xl: 16px;
+}
+
+.dict-page {
+  padding: 8px;
+}
+
+.page-header {
+  margin-bottom: 16px;
+}
+
+.page-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--apple-text);
+  margin: 0 0 4px 0;
+  letter-spacing: -0.5px;
+}
+
+.page-subtitle {
+  font-size: 14px;
+  color: var(--apple-text-secondary);
+  margin: 0;
+}
+
+.top-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  background: #fff;
+  border: 1px solid var(--apple-border);
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+}
+
+.category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.category-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.status-select {
+  width: 100px;
+}
+
+.content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.table-card {
+  flex: 1;
+  background: #fff;
+  border: 1px solid var(--apple-border);
+  border-radius: var(--apple-radius-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-card :deep(.el-table) {
+  flex: 1;
+  --el-table-border-color: var(--apple-border);
+  --el-table-header-bg-color: var(--apple-bg-secondary);
+  --el-table-row-hover-bg-color: rgba(0, 122, 255, 0.04);
+  background: transparent;
+}
+
+.table-card :deep(.el-table th.el-table__cell) {
+  background: var(--apple-bg-secondary);
+  font-weight: 600;
+  color: var(--apple-text);
+  font-size: 12px;
+}
+
+.table-card :deep(.el-table td.el-table__cell) {
+  border-bottom: 1px solid var(--apple-border-light);
+}
+
+.status-indicator {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.status-indicator.active {
+  color: var(--apple-success);
+}
+
+.status-indicator.inactive {
+  color: var(--apple-text-tertiary);
+}
+
+.table-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid var(--apple-border);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.form-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-item.full {
+  grid-column: span 2;
+}
+
+.form-item label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--apple-text-secondary);
+}
+
+.form-item .required {
+  color: var(--apple-danger);
+}
+
+.apple-dialog :deep(.el-dialog) {
+  border-radius: var(--apple-radius-xl) !important;
+  background: #fff !important;
+  border: 1px solid var(--apple-border) !important;
+}
+
+.apple-dialog :deep(.el-dialog__header) {
+  border-bottom: 1px solid var(--apple-border);
+}
+
+.apple-dialog :deep(.el-dialog__title) {
+  font-weight: 600;
+  color: var(--apple-text);
+}
+
+:deep(.el-table__cell) {
+  padding: 10px 0;
+  line-height: 1.5;
+}
+
+:deep(.el-table) {
+  font-size: 13px;
+}
+</style>

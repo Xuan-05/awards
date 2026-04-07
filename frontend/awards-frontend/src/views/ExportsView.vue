@@ -53,13 +53,19 @@ async function load() {
   }
 }
 
+// 刷新：回到第一页并重新加载
+function refresh() {
+  page.pageNo = 1
+  load()
+}
+
 async function createDetail() {
   creating.value = true
   try {
     const resp = await http.post<ApiResponse<number>>('/exports/detail', null)
     if (resp.data.code !== 0) throw new Error(resp.data.message)
     ElMessage.success('任务已创建')
-    await load()
+    refresh()
   } finally {
     creating.value = false
   }
@@ -71,7 +77,7 @@ async function createSummary() {
     const resp = await http.post<ApiResponse<number>>('/exports/summary', null)
     if (resp.data.code !== 0) throw new Error(resp.data.message)
     ElMessage.success('任务已创建')
-    await load()
+    refresh()
   } finally {
     creating.value = false
   }
@@ -86,13 +92,11 @@ onMounted(load)
 
 <template>
   <div class="export-page">
-    <!-- 页面标题 -->
     <div class="page-header">
       <h1 class="page-title">数据导出</h1>
       <p class="page-subtitle">导出任务管理与下载</p>
     </div>
 
-    <!-- 提示条 -->
     <div class="tip-banner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -102,8 +106,11 @@ onMounted(load)
       <span>导出严格走模板填充，请将学校模板放到后端配置的模板目录中</span>
     </div>
 
-    <!-- 操作按钮区 -->
+    <!-- 顶部栏：左侧总数 + 右侧按钮组 -->
     <div class="action-bar">
+      <div class="total-text">
+        共 {{ page.total }} 条
+      </div>
       <div class="action-buttons">
         <button class="action-btn primary" :disabled="creating" @click="createDetail">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -122,17 +129,16 @@ onMounted(load)
           </svg>
           <span>生成汇总导出</span>
         </button>
+        <button class="refresh-btn" @click="refresh">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M23 4v6h-6M1 20v-6h6"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          刷新
+        </button>
       </div>
-      <button class="refresh-btn" @click="load">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M23 4v6h-6M1 20v-6h6"/>
-          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-        </svg>
-        刷新
-      </button>
     </div>
 
-    <!-- 任务列表 -->
     <div class="task-list" v-loading="loading">
       <div v-if="rows.length === 0 && !loading" class="empty-state">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -143,11 +149,7 @@ onMounted(load)
         <span>点击上方按钮创建新任务</span>
       </div>
 
-      <div 
-        v-for="task in rows" 
-        :key="task.id" 
-        class="task-item"
-      >
+      <div v-for="task in rows" :key="task.id" class="task-item">
         <div class="task-icon" :class="getStatusClass(task.taskStatus)">
           <svg v-if="task.taskStatus === 'SUCCESS'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -202,11 +204,7 @@ onMounted(load)
         </div>
 
         <div class="task-action">
-          <button 
-            v-if="task.taskStatus === 'SUCCESS'" 
-            class="download-btn"
-            @click="download(task.id)"
-          >
+          <button v-if="task.taskStatus === 'SUCCESS'" class="download-btn" @click="download(task.id)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
               <polyline points="7,10 12,15 17,10"/>
@@ -216,19 +214,6 @@ onMounted(load)
           </button>
         </div>
       </div>
-    </div>
-
-    <!-- 分页 -->
-    <div class="pagination-bar" v-if="rows.length > 0">
-      <el-pagination
-        background
-        layout="total, prev, pager, next"
-        :total="page.total"
-        :current-page="page.pageNo"
-        :page-size="page.pageSize"
-        @update:current-page="(v) => (page.pageNo = v)"
-        @change="load"
-      />
     </div>
   </div>
 </template>
@@ -263,7 +248,7 @@ onMounted(load)
   padding: 12px 16px;
   background: rgba(255, 149, 0, 0.08);
   border: 1px solid rgba(255, 149, 0, 0.2);
-  border-radius: var(--apple-radius);
+  border-radius: 12px;
   margin-bottom: 16px;
   font-size: 13px;
   color: var(--apple-text-secondary);
@@ -272,7 +257,7 @@ onMounted(load)
 .tip-banner svg {
   width: 18px;
   height: 18px;
-  color: var(--apple-warning);
+  color: #ff9500;
   flex-shrink: 0;
 }
 
@@ -281,6 +266,11 @@ onMounted(load)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
+}
+
+.total-text {
+  font-size: 14px;
+  color: var(--apple-text-secondary);
 }
 
 .action-buttons {
@@ -293,7 +283,7 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   padding: 10px 20px;
-  border-radius: var(--apple-radius);
+  border-radius: 12px;
   border: none;
   font-size: 14px;
   font-weight: 500;
@@ -307,7 +297,7 @@ onMounted(load)
 }
 
 .action-btn.primary {
-  background: var(--apple-primary);
+  background: #007bff;
   color: white;
 }
 
@@ -325,10 +315,10 @@ onMounted(load)
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: var(--apple-radius);
+  border-radius: 12px;
   border: 1px solid var(--apple-border);
-  background: var(--apple-glass);
-  color: var(--apple-text);
+  background: #fff;
+  color: #333;
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
@@ -340,7 +330,7 @@ onMounted(load)
 }
 
 .refresh-btn:hover {
-  background: var(--apple-bg-secondary);
+  background: #f5f5f7;
 }
 
 .task-list {
@@ -356,12 +346,10 @@ onMounted(load)
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: var(--apple-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255,255,255,0.8);
   border: 1px solid var(--apple-border);
-  border-radius: var(--apple-radius-lg);
-  color: var(--apple-text-tertiary);
+  border-radius: 16px;
+  color: #8a8a8a;
 }
 
 .empty-state svg {
@@ -374,7 +362,7 @@ onMounted(load)
 .empty-state p {
   font-size: 15px;
   font-weight: 500;
-  color: var(--apple-text-secondary);
+  color: #666;
   margin: 0 0 4px 0;
 }
 
@@ -387,16 +375,14 @@ onMounted(load)
   align-items: flex-start;
   gap: 16px;
   padding: 16px 20px;
-  background: var(--apple-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  background: rgba(255,255,255,0.8);
   border: 1px solid var(--apple-border);
-  border-radius: var(--apple-radius-lg);
+  border-radius: 16px;
   transition: all 0.2s;
 }
 
 .task-item:hover {
-  box-shadow: var(--apple-shadow-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
 .task-icon {
@@ -416,17 +402,17 @@ onMounted(load)
 
 .task-icon.success {
   background: rgba(52, 199, 89, 0.12);
-  color: var(--apple-success);
+  color: #34c759;
 }
 
 .task-icon.failed {
   background: rgba(255, 59, 48, 0.12);
-  color: var(--apple-danger);
+  color: #ff3b30;
 }
 
 .task-icon.pending {
   background: rgba(255, 149, 0, 0.12);
-  color: var(--apple-warning);
+  color: #ff9500;
 }
 
 .task-content {
@@ -444,8 +430,8 @@ onMounted(load)
 .task-id {
   font-size: 12px;
   font-weight: 600;
-  color: var(--apple-text-secondary);
-  background: var(--apple-bg-secondary);
+  color: #666;
+  background: #f2f2f7;
   padding: 2px 8px;
   border-radius: 4px;
 }
@@ -453,7 +439,7 @@ onMounted(load)
 .task-type {
   font-size: 14px;
   font-weight: 600;
-  color: var(--apple-text);
+  color: #111;
 }
 
 .task-status {
@@ -465,17 +451,17 @@ onMounted(load)
 
 .task-status.success {
   background: rgba(52, 199, 89, 0.12);
-  color: var(--apple-success);
+  color: #34c759;
 }
 
 .task-status.failed {
   background: rgba(255, 59, 48, 0.12);
-  color: var(--apple-danger);
+  color: #ff3b30;
 }
 
 .task-status.pending {
   background: rgba(255, 149, 0, 0.12);
-  color: var(--apple-warning);
+  color: #ff9500;
 }
 
 .task-info {
@@ -489,7 +475,7 @@ onMounted(load)
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: var(--apple-text-secondary);
+  color: #666;
 }
 
 .info-row svg {
@@ -499,7 +485,7 @@ onMounted(load)
 }
 
 .error-text {
-  color: var(--apple-danger);
+  color: #ff3b30;
 }
 
 .task-action {
@@ -511,9 +497,9 @@ onMounted(load)
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: var(--apple-radius);
+  border-radius: 12px;
   border: none;
-  background: var(--apple-primary);
+  background: #007bff;
   color: white;
   font-size: 13px;
   font-weight: 500;
@@ -530,10 +516,11 @@ onMounted(load)
   background: #0066d6;
 }
 
-.pagination-bar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
+:root {
+  --apple-text: #111827;
+  --apple-text-secondary: #6b7280;
+  --apple-text-tertiary: #9ca3af;
+  --apple-border: #e5e7eb;
+  --apple-bg-secondary: #f9fafb;
 }
 </style>
-

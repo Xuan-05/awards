@@ -229,7 +229,7 @@ const canManage = computed(() => team.value?.captainUserId === user.me?.id);
 
 async function removeMember(row: TeamMember) {
   const resp = await http.delete<ApiResponse<null>>(
-    `/teams/${teamId}/members/${row.userId}`,
+    `/teams/${teamId}/members/user/${row.userId}`,
   );
   if (resp.data.code !== 0) throw new Error(resp.data.message);
   ElMessage.success("已移除");
@@ -241,7 +241,7 @@ async function saveMemberOrder() {
   savingMemberOrder.value = true;
   try {
     const resp = await http.put<ApiResponse<null>>(
-      `/teams/${teamId}/members/order`,
+      `/teams/${teamId}/members/sort`,
       {
         orderedUserIds: orderedNonCaptains.value.map((m) => m.userId),
       },

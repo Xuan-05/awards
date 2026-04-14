@@ -177,28 +177,32 @@ public class TeamController {
     }
 
     /**
+     * 调整团队成员顺序（仅队长）。
+     *
+     * <p>路径使用 {@code .../members/sort}，避免与 {@code DELETE .../members/{userId}} 在字面路径
+     * {@code order} 上被误解析为 userId 而导致 PUT 返回 405。</p>
+     *
+     * <p>请求体 {@link ReorderMembersReq#getOrderedUserIds()} 为 <b>非队长</b> 成员的用户 ID 顺序；
+     * 队长固定为第 1 位（服务端写 {@code member_order_no = 1}）。仅队长本人可调。</p>
+     */
+    @PutMapping("/teams/{id}/members/sort")
+    public ApiResponse<Void> reorderMembers(@PathVariable Long id, @RequestBody @Valid ReorderMembersReq req) {
+        List<Long> ids = req.getOrderedUserIds() != null ? req.getOrderedUserIds() : new ArrayList<>();
+        teamService.reorderMembers(id, ids);
+        return ApiResponse.ok(null);
+    }
+
+    /**
      * 移除团队成员。
      *
      * <p>
      * <b>权限</b>：需要登录；仅队长可移除；不能移除队长本人。
      * </p>
+     * <p>路径为 {@code .../members/user/{userId}}，避免与 {@code .../members/sort} 等字面路径冲突。</p>
      */
-    @DeleteMapping("/teams/{id}/members/{userId}")
+    @DeleteMapping("/teams/{id}/members/user/{userId}")
     public ApiResponse<Void> removeMember(@PathVariable Long id, @PathVariable Long userId) {
         teamService.removeMember(id, userId);
-        return ApiResponse.ok(null);
-    }
-
-    /**
-     * 调整团队成员顺序（仅队长）。
-     *
-     * <p>请求体 {@link ReorderMembersReq#getOrderedUserIds()} 为 <b>非队长</b> 成员的用户 ID 顺序；
-     * 队长固定为第 1 位（服务端写 {@code member_order_no = 1}）。仅队长本人可调。</p>
-     */
-    @PutMapping("/teams/{id}/members/order")
-    public ApiResponse<Void> reorderMembers(@PathVariable Long id, @RequestBody @Valid ReorderMembersReq req) {
-        List<Long> ids = req.getOrderedUserIds() != null ? req.getOrderedUserIds() : new ArrayList<>();
-        teamService.reorderMembers(id, ids);
         return ApiResponse.ok(null);
     }
 

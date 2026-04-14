@@ -52,9 +52,19 @@ public interface TeamService {
     BizTeam getTeam(Long id);
 
     /**
-     * 更新团队基础信息（仅队长可操作）。
+     * 更新团队基础信息（队长或校管理员可操作）。
      */
-    void updateTeam(Long id, String teamName, String remark);
+    void updateTeam(Long id, String teamName, Long ownerDeptId, String remark);
+
+    /**
+     * 删除团队（软删除，队长或校管理员可操作）。
+     */
+    void deleteTeam(Long teamId);
+
+    /**
+     * 判断用户是否可管理团队（队长或校管理员）。
+     */
+    boolean canManageTeam(Long userId, Long teamId);
 
     /**
      * 邀请成员加入团队（仅队长可操作）。

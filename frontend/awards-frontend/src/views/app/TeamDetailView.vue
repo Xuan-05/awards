@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
-import { useRoute } from "vue-router";
-import { ElMessage } from "element-plus";
+import { useRoute, useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
 import draggable from "vuedraggable";
 import { http } from "../../api/http";
 import { useUserStore } from "../../stores/user";
@@ -19,6 +19,7 @@ import {
 } from "../../utils/displayLabels";
 
 const route = useRoute();
+const router = useRouter();
 const user = useUserStore();
 const teamId = Number(route.params.id);
 
@@ -26,6 +27,15 @@ const loading = ref(false);
 const team = ref<Team | null>(null);
 
 const inviteLoading = ref(false);
+const editOpen = ref(false);
+const savingTeam = ref(false);
+const deletingTeam = ref(false);
+const deptOptions = ref<Array<{ id: number; deptName: string }>>([]);
+const teamForm = reactive({
+  teamName: "",
+  ownerDeptId: undefined as number | undefined,
+  remark: "",
+});
 // 邀请表单：学号/工号输入，查询后自动填充用户信息
 const inviteForm = reactive({
   studentNo: "",
@@ -86,6 +96,14 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+async function loadDepts() {
+  const resp = await http.get<
+    ApiResponse<Array<{ id: number; deptName: string }>>
+  >("/depts");
+  if (resp.data.code !== 0) throw new Error(resp.data.message);
+  deptOptions.value = resp.data.data || [];
 }
 
 async function loadMembers() {
@@ -224,8 +242,61 @@ async function inviteTeacher() {
   }
 }
 
-// 是否有管理权限：当前用户是该团队的队长
-const canManage = computed(() => team.value?.captainUserId === user.me?.id);
+const isCaptain = computed(() => team.value?.captainUserId === user.me?.id);
+// 团队信息管理权限：队长或校管理员
+const canManageTeam = computed(
+  () => isCaptain.value || user.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN"),
+);
+
+function openEditTeam() {
+  if (!team.value) return;
+  teamForm.teamName = team.value.teamName || "";
+  teamForm.ownerDeptId = team.value.ownerDeptId;
+  teamForm.remark = team.value.remark || "";
+  editOpen.value = true;
+}
+
+async function saveTeam() {
+  if (!teamForm.teamName.trim() || !teamForm.ownerDeptId) {
+    ElMessage.warning("请填写团队名称和所属院系");
+    return;
+  }
+  savingTeam.value = true;
+  try {
+    const resp = await http.put<ApiResponse<null>>(`/teams/${teamId}`, {
+      teamName: teamForm.teamName.trim(),
+      ownerDeptId: teamForm.ownerDeptId,
+      remark: teamForm.remark.trim(),
+    });
+    if (resp.data.code !== 0) throw new Error(resp.data.message);
+    ElMessage.success("团队信息已更新");
+    editOpen.value = false;
+    await load();
+  } finally {
+    savingTeam.value = false;
+  }
+}
+
+async function deleteTeam() {
+  try {
+    await ElMessageBox.confirm(
+      "删除后团队将不可见，是否继续？",
+      "确认删除团队",
+      { type: "warning", confirmButtonText: "删除", confirmButtonClass: "el-button--danger" },
+    );
+  } catch {
+    return;
+  }
+  deletingTeam.value = true;
+  try {
+    const resp = await http.delete<ApiResponse<null>>(`/teams/${teamId}`);
+    if (resp.data.code !== 0) throw new Error(resp.data.message);
+    ElMessage.success("团队已删除");
+    router.replace("/app/teams");
+  } finally {
+    deletingTeam.value = false;
+  }
+}
 
 async function removeMember(row: TeamMember) {
   const resp = await http.delete<ApiResponse<null>>(
@@ -237,7 +308,7 @@ async function removeMember(row: TeamMember) {
 }
 
 async function saveMemberOrder() {
-  if (!canManage.value) return;
+  if (!isCaptain.value) return;
   savingMemberOrder.value = true;
   try {
     const resp = await http.put<ApiResponse<null>>(
@@ -258,7 +329,7 @@ async function saveMemberOrder() {
 }
 
 async function onMemberDragEnd() {
-  if (!canManage.value || orderedNonCaptains.value.length <= 1) return;
+  if (!isCaptain.value || orderedNonCaptains.value.length <= 1) return;
   await saveMemberOrder();
 }
 
@@ -273,7 +344,7 @@ async function removeTeacher(row: TeamTeacher) {
 
 onMounted(async () => {
   await user.fetchMe();
-  await Promise.all([load(), loadMembers(), loadTeachers(), loadInvitations()]);
+  await Promise.all([load(), loadMembers(), loadTeachers(), loadInvitations(), loadDepts()]);
 });
 </script>
 
@@ -338,10 +409,23 @@ onMounted(async () => {
           {{ formatTeamRemark(team.remark) }}
         </p>
       </div>
+      <div class="team-actions" v-if="canManageTeam">
+        <button class="header-action-btn" type="button" @click="openEditTeam">
+          编辑团队
+        </button>
+        <button
+          class="header-action-btn danger"
+          type="button"
+          :disabled="deletingTeam"
+          @click="deleteTeam"
+        >
+          {{ deletingTeam ? "删除中..." : "删除团队" }}
+        </button>
+      </div>
     </div>
 
     <!-- 邀请面板 (仅队长可见) -->
-    <div class="invite-section" v-if="canManage">
+    <div class="invite-section" v-if="isCaptain">
       <h2 class="section-title">邀请成员</h2>
       <div class="invite-cards">
         <div class="invite-card">
@@ -459,7 +543,7 @@ onMounted(async () => {
       <h2 class="section-title">
         团队成员
         <span class="count">{{ members.length }}人</span>
-        <span v-if="canManage && orderedNonCaptains.length > 1" class="order-hint">
+        <span v-if="isCaptain && orderedNonCaptains.length > 1" class="order-hint">
           {{
             savingMemberOrder ? "正在保存顺序…" : "拖拽左侧手柄调整队员顺序"
           }}
@@ -493,7 +577,7 @@ onMounted(async () => {
           </div>
 
           <draggable
-            v-if="canManage"
+            v-if="isCaptain"
             v-model="orderedNonCaptains"
             item-key="userId"
             class="members-draggable"
@@ -619,7 +703,7 @@ onMounted(async () => {
             {{ labelInviteStatus(teacher.joinStatus) }}
           </div>
           <button
-            v-if="canManage"
+            v-if="isCaptain"
             class="teacher-remove"
             @click="removeTeacher(teacher)"
           >
@@ -672,6 +756,38 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <el-dialog v-model="editOpen" title="修改团队信息" width="560px">
+      <el-form label-width="96px">
+        <el-form-item label="团队名称" required>
+          <el-input v-model="teamForm.teamName" placeholder="请输入团队名称" />
+        </el-form-item>
+        <el-form-item label="所属院系" required>
+          <el-select v-model="teamForm.ownerDeptId" placeholder="请选择院系" style="width: 100%">
+            <el-option
+              v-for="dept in deptOptions"
+              :key="dept.id"
+              :label="dept.deptName"
+              :value="dept.id"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="团队简介">
+          <el-input
+            v-model="teamForm.remark"
+            type="textarea"
+            :rows="3"
+            placeholder="可选，填写团队简介"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editOpen = false">取消</el-button>
+        <el-button type="primary" :loading="savingTeam" @click="saveTeam">
+          保存
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -709,6 +825,38 @@ onMounted(async () => {
 
 .team-info {
   flex: 1;
+}
+
+.team-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.header-action-btn {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.header-action-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.header-action-btn.danger {
+  border-color: rgba(255, 107, 107, 0.5);
+  background: rgba(255, 107, 107, 0.24);
+}
+
+.header-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .team-name {

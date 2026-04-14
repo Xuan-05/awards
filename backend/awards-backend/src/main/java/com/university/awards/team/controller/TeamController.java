@@ -144,7 +144,20 @@ public class TeamController {
      */
     @PutMapping("/teams/{id}")
     public ApiResponse<Void> updateTeam(@PathVariable Long id, @RequestBody @Valid TeamUpdateReq req) {
-        teamService.updateTeam(id, req.getTeamName(), req.getRemark());
+        teamService.updateTeam(id, req.getTeamName(), req.getOwnerDeptId(), req.getRemark());
+        return ApiResponse.ok(null);
+    }
+
+    /**
+     * 删除团队（软删除）。
+     *
+     * <p>
+     * <b>权限</b>：需要登录；队长或 SCHOOL_ADMIN/SYS_ADMIN 可操作。
+     * </p>
+     */
+    @DeleteMapping("/teams/{id}")
+    public ApiResponse<Void> deleteTeam(@PathVariable Long id) {
+        teamService.deleteTeam(id);
         return ApiResponse.ok(null);
     }
 
@@ -340,6 +353,11 @@ public class TeamController {
          */
         @NotBlank
         private String teamName;
+        /**
+         * 团队归属院系 ID。
+         */
+        @NotNull
+        private Long ownerDeptId;
         /**
          * 备注（可选）。
          */

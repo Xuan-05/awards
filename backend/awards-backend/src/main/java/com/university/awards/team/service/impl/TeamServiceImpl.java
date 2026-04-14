@@ -174,17 +174,38 @@ public class TeamServiceImpl implements TeamService {
     }
 
     @Override
-    public void updateTeam(Long id, String teamName, String remark) {
+    public void updateTeam(Long id, String teamName, Long ownerDeptId, String remark) {
         StpUtil.checkLogin();
-        BizTeam team = teamMapper.selectById(id);
-        if (team == null) throw new BizException(404, "团队不存在");
-        if (!team.getCaptainUserId().equals(StpUtil.getLoginIdAsLong())) throw new BizException(403, "无权限操作团队");
+        Long uid = StpUtil.getLoginIdAsLong();
+        if (!canManageTeam(uid, id)) throw new BizException(403, "无权限操作团队");
 
         BizTeam upd = new BizTeam();
         upd.setId(id);
         upd.setTeamName(teamName);
+        upd.setOwnerDeptId(ownerDeptId);
         upd.setRemark(remark);
+        upd.setUpdatedAt(LocalDateTime.now());
         teamMapper.updateById(upd);
+    }
+
+    @Override
+    public void deleteTeam(Long teamId) {
+        StpUtil.checkLogin();
+        Long uid = StpUtil.getLoginIdAsLong();
+        if (!canManageTeam(uid, teamId)) throw new BizException(403, "无权限删除团队");
+
+        BizTeam upd = new BizTeam();
+        upd.setId(teamId);
+        upd.setDeleted(1);
+        upd.setUpdatedAt(LocalDateTime.now());
+        teamMapper.updateById(upd);
+    }
+
+    @Override
+    public boolean canManageTeam(Long userId, Long teamId) {
+        BizTeam team = teamMapper.selectById(teamId);
+        if (team == null || (team.getDeleted() != null && team.getDeleted() == 1)) return false;
+        return Objects.equals(team.getCaptainUserId(), userId) || authz.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
     }
 
     @Override

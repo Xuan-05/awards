@@ -4,11 +4,6 @@ import { useRouter } from "vue-router";
 import { http } from "../../api/http";
 import type { ApiResponse } from "../../types/api";
 
-type Summary = {
-  teamCount: number;
-  pendingAuditCount: number;
-  approvedCount: number;
-};
 type Todos = {
   unreadMessageCount: number;
   pendingInvitationCount: number;
@@ -17,16 +12,7 @@ type Todos = {
 };
 
 const router = useRouter();
-const loading = ref(false);
-const summary = ref<Summary | null>(null);
-
 const todos = ref<Todos | null>(null);
-
-async function loadSummary() {
-  const resp = await http.get<ApiResponse<Summary>>("/dashboard/summary");
-  if (resp.data.code !== 0) throw new Error(resp.data.message);
-  summary.value = resp.data.data;
-}
 
 async function loadTodos() {
   const resp = await http.get<ApiResponse<Todos>>("/dashboard/todos");
@@ -34,16 +20,7 @@ async function loadTodos() {
   todos.value = resp.data.data;
 }
 
-async function load() {
-  loading.value = true;
-  try {
-    await Promise.all([loadSummary(), loadTodos()]);
-  } finally {
-    loading.value = false;
-  }
-}
-
-onMounted(load);
+onMounted(loadTodos);
 
 const currentDate = new Date().toLocaleDateString('zh-CN', {
   year: 'numeric',
@@ -74,50 +51,6 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
         新建填报
       </button>
     </div>
-     <!-- 统计卡片 -->
-    <div class="stats-row" v-loading="loading">
-      <div class="stat-card stat-card-blue">
-        <div class="stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ summary?.teamCount ?? '-' }}</div>
-          <div class="stat-label">团队总数</div>
-        </div>
-      </div>
-
-      <div class="stat-card stat-card-orange">
-        <div class="stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12,6 12,12 16,14"/>
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ summary?.pendingAuditCount ?? '-' }}</div>
-          <div class="stat-label">待审核</div>
-        </div>
-      </div>
-
-      <div class="stat-card stat-card-green">
-        <div class="stat-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-            <polyline points="22,4 12,14.01 9,11.01"/>
-          </svg>
-        </div>
-        <div class="stat-content">
-          <div class="stat-value">{{ summary?.approvedCount ?? '-' }}</div>
-          <div class="stat-label">已通过</div>
-        </div>
-      </div>
-    </div>
-
     <!-- 待办事项 -->
     <div class="todos-section">
       <h2 class="section-title">待办事项</h2>
@@ -404,78 +337,6 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* Stats Grid */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.stat-card {
-  background: var(--apple-glass);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid var(--apple-border);
-  border-radius: var(--apple-radius-lg);
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--apple-shadow-md);
-}
-
-.stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-icon svg {
-  width: 24px;
-  height: 24px;
-}
-.stat-card-blue .stat-icon {
-  background: rgba(0, 122, 255, 0.12);
-  color: var(--apple-primary);
-}
-
-.stat-card-orange .stat-icon {
-  background: rgba(255, 149, 0, 0.12);
-  color: var(--apple-warning);
-}
-
-.stat-card-green .stat-icon {
-  background: rgba(52, 199, 89, 0.12);
-  color: var(--apple-success);
-}
-
-.stat-content {
-  flex: 1;
-  min-width: 0;
-}
-
-.stat-value {
-  font-size: 33px;
-  font-weight: 700;
-  color: var(--apple-text);
-  line-height: 1.2;
-  letter-spacing: -1px;
-}
-
-.stat-label {
-  font-size: 14px;
-  color: var(--apple-text-secondary);
-  margin-top: 2px;
-}
 /* Todos Section */
 .todos-section {
   margin-bottom: 24px;
@@ -682,10 +543,6 @@ const currentDate = new Date().toLocaleDateString('zh-CN', {
 }
 
 @media (max-width: 768px) {
-  .stats-grid {
-    grid-template-columns: 1fr;
-  }
-
   .todos-grid {
     grid-template-columns: 1fr;
   }

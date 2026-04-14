@@ -13,6 +13,7 @@ import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -189,6 +190,19 @@ public class TeamController {
     }
 
     /**
+     * 调整团队成员顺序（仅队长）。
+     *
+     * <p>请求体 {@link ReorderMembersReq#getOrderedUserIds()} 为 <b>非队长</b> 成员的用户 ID 顺序；
+     * 队长固定为第 1 位（服务端写 {@code member_order_no = 1}）。仅队长本人可调。</p>
+     */
+    @PutMapping("/teams/{id}/members/order")
+    public ApiResponse<Void> reorderMembers(@PathVariable Long id, @RequestBody @Valid ReorderMembersReq req) {
+        List<Long> ids = req.getOrderedUserIds() != null ? req.getOrderedUserIds() : new ArrayList<>();
+        teamService.reorderMembers(id, ids);
+        return ApiResponse.ok(null);
+    }
+
+    /**
      * 移除指导教师。
      *
      * <p>
@@ -335,5 +349,13 @@ public class TeamController {
          */
         @NotNull
         private Long userId;
+    }
+
+    @Data
+    public static class ReorderMembersReq {
+        /**
+         * 非队长成员的用户 ID 顺序（与展示顺序一致）；可为空数组（团队仅队长时）。
+         */
+        private List<Long> orderedUserIds;
     }
 }

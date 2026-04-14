@@ -19,8 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -255,10 +257,17 @@ public class TeamServiceImpl implements TeamService {
         invitationMapper.updateById(inv);
 
         if ("MEMBER".equals(inv.getInviteeType())) {
+            List<BizTeamMember> existing = memberMapper.selectList(new LambdaQueryWrapper<BizTeamMember>()
+                    .eq(BizTeamMember::getTeamId, inv.getTeamId())
+                    .eq(BizTeamMember::getJoinStatus, "ACCEPTED"));
+            int nextOrder = existing.stream().mapToInt(BizTeamMember::getMemberOrderNo).max().orElse(0) + 1;
+            if (nextOrder < 2) {
+                nextOrder = 2;
+            }
             BizTeamMember m = new BizTeamMember();
             m.setTeamId(inv.getTeamId());
             m.setUserId(uid);
-            m.setMemberOrderNo(1);
+            m.setMemberOrderNo(nextOrder);
             m.setIsCaptain(0);
             m.setJoinStatus("ACCEPTED");
             memberMapper.insert(m);
@@ -323,6 +332,55 @@ public class TeamServiceImpl implements TeamService {
         memberMapper.delete(new LambdaQueryWrapper<BizTeamMember>()
                 .eq(BizTeamMember::getTeamId, teamId)
                 .eq(BizTeamMember::getUserId, memberUserId));
+    }
+
+    @Override
+    @Transactional
+    public void reorderMembers(Long teamId, List<Long> orderedNonCaptainUserIds) {
+        StpUtil.checkLogin();
+        Long uid = StpUtil.getLoginIdAsLong();
+        BizTeam team = teamMapper.selectById(teamId);
+        if (team == null) {
+            throw new BizException(404, "团队不存在");
+        }
+        if (!team.getCaptainUserId().equals(uid)) {
+            throw new BizException(403, "仅队长可调整成员顺序");
+        }
+        if (orderedNonCaptainUserIds == null) {
+            orderedNonCaptainUserIds = List.of();
+        }
+        if (orderedNonCaptainUserIds.size() != new HashSet<>(orderedNonCaptainUserIds).size()) {
+            throw new BizException(400, "成员顺序列表存在重复用户");
+        }
+
+        List<BizTeamMember> members = memberMapper.selectList(new LambdaQueryWrapper<BizTeamMember>()
+                .eq(BizTeamMember::getTeamId, teamId)
+                .eq(BizTeamMember::getJoinStatus, "ACCEPTED"));
+        Set<Long> expectedNonCaptain = members.stream()
+                .filter(m -> m.getIsCaptain() == null || m.getIsCaptain() == 0)
+                .map(BizTeamMember::getUserId)
+                .collect(Collectors.toSet());
+        if (orderedNonCaptainUserIds.size() != expectedNonCaptain.size()
+                || !new HashSet<>(orderedNonCaptainUserIds).equals(expectedNonCaptain)) {
+            throw new BizException(400, "成员顺序列表与当前团队不一致");
+        }
+
+        for (BizTeamMember m : members) {
+            if (m.getIsCaptain() != null && m.getIsCaptain() == 1) {
+                m.setMemberOrderNo(1);
+                memberMapper.updateById(m);
+            }
+        }
+        for (int i = 0; i < orderedNonCaptainUserIds.size(); i++) {
+            Long userId = orderedNonCaptainUserIds.get(i);
+            BizTeamMember m = members.stream()
+                    .filter(x -> Objects.equals(x.getUserId(), userId)
+                            && (x.getIsCaptain() == null || x.getIsCaptain() == 0))
+                    .findFirst()
+                    .orElseThrow(() -> new BizException(400, "成员不存在"));
+            m.setMemberOrderNo(i + 2);
+            memberMapper.updateById(m);
+        }
     }
 
     @Override

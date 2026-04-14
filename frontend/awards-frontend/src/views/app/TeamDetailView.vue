@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from "vue";
 import { useRoute } from "vue-router";
 import { ElMessage } from "element-plus";
+import draggable from "vuedraggable";
 import { http } from "../../api/http";
 import { useUserStore } from "../../stores/user";
 import type { ApiResponse } from "../../types/api";
@@ -39,6 +40,31 @@ const teacherSearching = ref(false);
 
 const membersLoading = ref(false);
 const members = ref<TeamMember[]>([]);
+/** 非队长成员顺序（仅队长可拖拽；与接口同步） */
+const orderedNonCaptains = ref<TeamMember[]>([]);
+const savingMemberOrder = ref(false);
+
+const captainMembers = computed(() =>
+  [...members.value]
+    .filter((m) => m.isCaptain === 1)
+    .sort(
+      (a, b) =>
+        a.memberOrderNo - b.memberOrderNo || a.userId - b.userId,
+    ),
+);
+
+const nonCaptainMembers = computed(() =>
+  [...members.value]
+    .filter((m) => m.isCaptain !== 1)
+    .sort(
+      (a, b) =>
+        a.memberOrderNo - b.memberOrderNo || a.userId - b.userId,
+    ),
+);
+
+function syncOrderedNonCaptains() {
+  orderedNonCaptains.value = nonCaptainMembers.value.map((m) => ({ ...m }));
+}
 
 const teachersLoading = ref(false);
 const teachers = ref<TeamTeacher[]>([]);
@@ -70,6 +96,7 @@ async function loadMembers() {
     );
     if (resp.data.code !== 0) throw new Error(resp.data.message);
     members.value = resp.data.data;
+    syncOrderedNonCaptains();
   } finally {
     membersLoading.value = false;
   }
@@ -207,6 +234,32 @@ async function removeMember(row: TeamMember) {
   if (resp.data.code !== 0) throw new Error(resp.data.message);
   ElMessage.success("已移除");
   await loadMembers();
+}
+
+async function saveMemberOrder() {
+  if (!canManage.value) return;
+  savingMemberOrder.value = true;
+  try {
+    const resp = await http.put<ApiResponse<null>>(
+      `/teams/${teamId}/members/order`,
+      {
+        orderedUserIds: orderedNonCaptains.value.map((m) => m.userId),
+      },
+    );
+    if (resp.data.code !== 0) throw new Error(resp.data.message);
+    ElMessage.success("成员顺序已更新");
+    await loadMembers();
+  } catch (e) {
+    syncOrderedNonCaptains();
+    ElMessage.error(e instanceof Error ? e.message : "保存顺序失败");
+  } finally {
+    savingMemberOrder.value = false;
+  }
+}
+
+async function onMemberDragEnd() {
+  if (!canManage.value || orderedNonCaptains.value.length <= 1) return;
+  await saveMemberOrder();
 }
 
 async function removeTeacher(row: TeamTeacher) {
@@ -401,47 +454,137 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- 成员列表 -->
+    <!-- 成员列表：队长固定首位；队长可拖拽调整其余队员顺序 -->
     <div class="members-section">
       <h2 class="section-title">
         团队成员
         <span class="count">{{ members.length }}人</span>
+        <span v-if="canManage && orderedNonCaptains.length > 1" class="order-hint">
+          {{
+            savingMemberOrder ? "正在保存顺序…" : "拖拽左侧手柄调整队员顺序"
+          }}
+        </span>
       </h2>
-      <div class="members-grid" v-loading="membersLoading">
-        <div v-for="member in members" :key="member.userId" class="member-card">
+      <div class="members-grid-wrap" v-loading="membersLoading">
+        <div class="members-grid">
           <div
-            class="member-avatar"
-            :class="{ captain: member.isCaptain === 1 }"
+            v-for="member in captainMembers"
+            :key="'cap-' + member.userId"
+            class="member-card"
           >
-            {{ member.user?.realName?.charAt(0) || member.userId }}
-          </div>
-          <div class="member-info">
-            <span class="member-name">{{ member.user?.realName || "-" }}</span>
-            <span class="member-username">{{
-              member.user?.username || "-"
-            }}</span>
-          </div>
-          <div class="member-badge" :class="member.joinStatus?.toLowerCase()">
-            {{ labelInviteStatus(member.joinStatus) }}
-          </div>
-          <div class="member-captain-badge" v-if="member.isCaptain === 1">
-            队长
-          </div>
-          <button
-            v-if="canManage && member.isCaptain !== 1"
-            class="member-remove"
-            @click="removeMember(member)"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
+            <div
+              class="member-avatar"
+              :class="{ captain: member.isCaptain === 1 }"
             >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+              {{ member.user?.realName?.charAt(0) || member.userId }}
+            </div>
+            <div class="member-info">
+              <span class="member-name">{{ member.user?.realName || "-" }}</span>
+              <span class="member-username">{{
+                member.user?.username || "-"
+              }}</span>
+            </div>
+            <div class="member-badge" :class="member.joinStatus?.toLowerCase()">
+              {{ labelInviteStatus(member.joinStatus) }}
+            </div>
+            <div class="member-captain-badge" v-if="member.isCaptain === 1">
+              队长
+            </div>
+          </div>
+
+          <draggable
+            v-if="canManage"
+            v-model="orderedNonCaptains"
+            item-key="userId"
+            class="members-draggable"
+            handle=".drag-handle"
+            ghost-class="member-card-ghost"
+            :animation="180"
+            @end="onMemberDragEnd"
+          >
+            <template #item="{ element }">
+              <div class="member-card member-card-draggable">
+                <button
+                  type="button"
+                  class="drag-handle"
+                  aria-label="拖动排序"
+                  title="拖动排序"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <circle cx="9" cy="5" r="1" fill="currentColor" />
+                    <circle cx="15" cy="5" r="1" fill="currentColor" />
+                    <circle cx="9" cy="12" r="1" fill="currentColor" />
+                    <circle cx="15" cy="12" r="1" fill="currentColor" />
+                    <circle cx="9" cy="19" r="1" fill="currentColor" />
+                    <circle cx="15" cy="19" r="1" fill="currentColor" />
+                  </svg>
+                </button>
+                <div class="member-avatar">
+                  {{ element.user?.realName?.charAt(0) || element.userId }}
+                </div>
+                <div class="member-info">
+                  <span class="member-name">{{
+                    element.user?.realName || "-"
+                  }}</span>
+                  <span class="member-username">{{
+                    element.user?.username || "-"
+                  }}</span>
+                </div>
+                <div
+                  class="member-badge"
+                  :class="element.joinStatus?.toLowerCase()"
+                >
+                  {{ labelInviteStatus(element.joinStatus) }}
+                </div>
+                <button
+                  class="member-remove"
+                  type="button"
+                  @click="removeMember(element)"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            </template>
+          </draggable>
+
+          <template v-else>
+            <div
+              v-for="member in nonCaptainMembers"
+              :key="'mem-' + member.userId"
+              class="member-card"
+            >
+              <div class="member-avatar">
+                {{ member.user?.realName?.charAt(0) || member.userId }}
+              </div>
+              <div class="member-info">
+                <span class="member-name">{{
+                  member.user?.realName || "-"
+                }}</span>
+                <span class="member-username">{{
+                  member.user?.username || "-"
+                }}</span>
+              </div>
+              <div
+                class="member-badge"
+                :class="member.joinStatus?.toLowerCase()"
+              >
+                {{ labelInviteStatus(member.joinStatus) }}
+              </div>
+            </div>
+          </template>
         </div>
         <div v-if="members.length === 0 && !membersLoading" class="empty-hint">
           暂无成员
@@ -787,11 +930,59 @@ onMounted(async () => {
   margin-bottom: 24px;
 }
 
+.members-grid-wrap {
+  min-height: 48px;
+}
+
 .members-grid,
 .teachers-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 12px;
+}
+
+.members-draggable {
+  display: contents;
+}
+
+.section-title .order-hint {
+  margin-left: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--apple-text-secondary);
+}
+
+.member-card-draggable {
+  padding-left: 6px;
+}
+
+.drag-handle {
+  flex-shrink: 0;
+  width: 28px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: var(--apple-radius-sm);
+  background: transparent;
+  color: var(--apple-text-tertiary);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.member-card-ghost {
+  opacity: 0.55;
+  box-shadow: var(--apple-shadow-md);
 }
 
 .member-card,

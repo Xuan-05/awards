@@ -93,6 +93,17 @@ public interface TeamService {
     void removeMember(Long teamId, Long memberUserId);
 
     /**
+     * 调整团队成员展示顺序（仅队长可操作）。
+     *
+     * <p>队长固定为第 1 位（{@code member_order_no = 1}）。{@code orderedNonCaptainUserIds}
+     * 为除队长外已接受成员的用户 ID 列表，顺序即第 2、3、4…位。</p>
+     *
+     * @param teamId                     团队 ID
+     * @param orderedNonCaptainUserIds 非队长成员 userId 顺序；须与库中当前非队长 ACCEPTED 成员集合一致
+     */
+    void reorderMembers(Long teamId, List<Long> orderedNonCaptainUserIds);
+
+    /**
      * 移除指导教师（仅队长可操作）。
      */
     void removeTeacher(Long teamId, Long teacherUserId);

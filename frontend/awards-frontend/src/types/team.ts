@@ -50,7 +50,7 @@ export type TeamMember = {
   teamId: number
   /** 成员用户 ID */
   userId: number
-  /** 成员排序号 */
+  /** 队内展示顺序（升序；队长为 1，队员为 2、3…） */
   memberOrderNo: number
   /** 是否队长：1 是 / 0 否 */
   isCaptain: number

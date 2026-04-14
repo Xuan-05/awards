@@ -1,13 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, nextTick } from "vue";
+import { computed, onMounted, reactive, ref } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import { http } from "../../api/http";
 import { useUserStore } from "../../stores/user";
 import type { ApiResponse, PageResult } from "../../types/api";
 import { labelRoleCode, labelUserType } from "../../utils/displayLabels";
-import { ElTable } from "element-plus";
-import type { ElTable as ElTableType } from "element-plus";
-
 type Dept = {
   id: number;
   deptCode: string;
@@ -37,7 +34,6 @@ type UserRow = {
   roles: string[];
 };
 
-const tableRef = ref<InstanceType<typeof ElTable> | null>(null);
 const renderKey = ref(0)
 const userStore = useUserStore();
 const isSysAdmin = computed(() => userStore.hasAnyRole("SYS_ADMIN"));
@@ -173,26 +169,6 @@ async function toggleUser(row: UserRow) {
   );
   if (resp.data.code !== 0) throw new Error(resp.data.message);
   ElMessage.success("已更新");
-  await loadUsers();
-}
-
-async function removeUser(row: UserRow) {
-  if (!canOperate(row)) {
-    ElMessage.warning("无权限操作系统管理员用户");
-    return;
-  }
-  try {
-    await ElMessageBox.confirm(
-      `确认删除用户「${row.realName}」吗？`,
-      "提示",
-      { type: "warning" },
-    );
-  } catch {
-    return;
-  }
-  const resp = await http.delete<ApiResponse<null>>(`/admin/users/${row.id}`);
-  if (resp.data.code !== 0) throw new Error(resp.data.message);
-  ElMessage.success("已删除");
   await loadUsers();
 }
 
@@ -359,7 +335,6 @@ onMounted(async () => {
 
     <div class="user-table" v-loading="loading">
       <el-table 
-        ref="tableRef" 
         :data="rows" 
         style="width: 100%" 
         :key="renderKey"

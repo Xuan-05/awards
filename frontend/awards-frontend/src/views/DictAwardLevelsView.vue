@@ -198,9 +198,6 @@ onMounted(async () => {
     <div class="content-area">
       <div class="table-card" v-loading="loading">
         <el-table :data="rows" style="width:100%">
-          <!-- 编号 -->
-          <el-table-column prop="id" label="ID" width="83" align="center" />
-
           <!-- 获奖范围 -->
           <el-table-column label="获奖范围" width="180" align="left">
             <template #default="{ row }">

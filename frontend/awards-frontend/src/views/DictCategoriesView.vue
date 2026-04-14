@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { http } from '../api/http'
 
@@ -160,7 +160,6 @@ onMounted(() => {
     <div class="content-area">
       <div class="table-card" v-loading="loading">
         <el-table :data="rows" style="width: 100%">
-          <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="categoryName" label="类别名称" min-width="180" align="left" />
           <el-table-column prop="enabled" label="状态" width="100" align="center">
             <template #default="{ row }">

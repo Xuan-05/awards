@@ -4,7 +4,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { http } from '../../api/http'
 import { useUserStore } from '../../stores/user'
-import { labelRoleCode, labelUserType } from '../../utils/displayLabels'
+import { labelUserType } from '../../utils/displayLabels'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 

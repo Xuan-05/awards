@@ -225,7 +225,6 @@ onMounted(async () => {
       <!-- 数据表格 -->
       <div class="table-card" v-loading="loading">
         <el-table :data="rows" style="width: 100%">
-          <el-table-column prop="id" label="ID" width="80" align="center" />
           <el-table-column prop="competitionName" label="竞赛名称" min-width="220" align="left">
             <template #default="{ row }">
               <div class="comp-name">
@@ -258,12 +257,13 @@ onMounted(async () => {
             </template>
           </el-table-column>
           <el-table-column prop="sortNo" label="排序" width="100" align="center" />
-          <el-table-column label="操作" width="220" fixed="right" align="center"">
+          <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
             <el-button size="small" text @click="openEdit(row)">编辑</el-button>
             <el-button size="small" text :type="row.enabled === 1 ? 'warning' : 'success'" @click="toggle(row)">
               {{ row.enabled === 1 ? '停用' : '启用' }}
             </el-button>
+            <el-button v-if="row.enabled === 0" size="small" text type="danger" @click="remove(row)">删除</el-button>
 </template>
 </el-table-column>
 </el-table>

@@ -7,7 +7,6 @@ import type { Team, TeamMember, TeamTeacher } from "../../types/team"
 import { labelInviteStatus, labelTeamStatus, labelUserType } from "../../utils/displayLabels"
 
 type Dept = { id: number; deptCode: string; deptName: string; parentId?: number | null; enabled: number; sortNo: number }
-type DeptTreeNode = Dept & { children: DeptTreeNode[] }
 type TeamAdminRow = {
   id: number
   teamName: string

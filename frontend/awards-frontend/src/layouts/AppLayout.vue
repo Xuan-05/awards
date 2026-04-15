@@ -6,6 +6,7 @@ const menu: MenuItem[] = [
   { title: '工作台', path: '/app/workbench' },
   { title: '我的团队', path: '/app/teams' },
   { title: '竞赛填报', path: '/app/records' },
+  { title: '我的获奖', path: '/app/my-awards' },
   { title: '消息中心', path: '/app/messages' },
   { title: '个人中心', path: '/app/profile' },
 ]

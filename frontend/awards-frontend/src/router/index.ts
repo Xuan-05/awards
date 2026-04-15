@@ -9,6 +9,7 @@ import ProfileView from '../views/app/ProfileView.vue'
 import TeamDetailView from '../views/app/TeamDetailView.vue'
 import RecordListView from '../views/app/RecordListView.vue'
 import RecordEditView from '../views/app/RecordEditView.vue'
+import MyAwardsView from '../views/app/MyAwardsView.vue'
 
 // Reuse existing pages temporarily (will be refined by later todos)
 import TeamsView from '../views/TeamsView.vue'
@@ -47,6 +48,7 @@ export const router = createRouter({
         { path: 'teams', component: TeamsView, meta: { title: '我的团队' } },
         { path: 'teams/:id', component: TeamDetailView, meta: { title: '团队详情' } },
         { path: 'records', component: RecordListView, meta: { title: '竞赛填报' } },
+        { path: 'my-awards', component: MyAwardsView, meta: { title: '我的获奖' } },
         { path: 'records/new', component: RecordEditView, meta: { title: '新建填报' } },
         { path: 'records/:id', component: RecordEditView, meta: { title: '填报详情/编辑' } },
         { path: 'messages', component: MessagesView, meta: { title: '消息中心' } },

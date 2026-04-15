@@ -7,21 +7,38 @@ import com.university.awards.audit.entity.BizAwardRecordAudit;
 import com.university.awards.audit.mapper.BizAwardRecordAuditMapper;
 import com.university.awards.common.BizException;
 import com.university.awards.common.PageResult;
+import com.university.awards.dict.entity.DictAwardLevel;
 import com.university.awards.dict.entity.DictCompetition;
+import com.university.awards.dict.mapper.DictAwardLevelMapper;
+import com.university.awards.dict.mapper.DictCompetitionMapper;
 import com.university.awards.dict.service.DictCompetitionService;
 import com.university.awards.rbac.service.AuthzService;
 import com.university.awards.record.entity.BizAwardRecord;
 import com.university.awards.record.mapper.BizAwardRecordMapper;
 import com.university.awards.record.mapper.BizAwardRecordFileMapper;
 import com.university.awards.record.service.AwardRecordService;
+import com.university.awards.record.vo.MyAwardVO;
 import com.university.awards.systemconfig.service.SysConfigService;
 import com.university.awards.team.entity.BizTeam;
+import com.university.awards.team.entity.BizTeamMember;
+import com.university.awards.team.entity.BizTeamTeacher;
 import com.university.awards.team.mapper.BizTeamMapper;
+import com.university.awards.team.mapper.BizTeamMemberMapper;
+import com.university.awards.team.mapper.BizTeamTeacherMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,10 +47,19 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private final BizAwardRecordMapper recordMapper;
     private final BizAwardRecordAuditMapper auditMapper;
     private final DictCompetitionService competitionService;
+    private final DictCompetitionMapper competitionMapper;
+    private final DictAwardLevelMapper awardLevelMapper;
     private final BizTeamMapper teamMapper;
+    private final BizTeamMemberMapper teamMemberMapper;
+    private final BizTeamTeacherMapper teamTeacherMapper;
     private final AuthzService authz;
     private final BizAwardRecordFileMapper recordFileMapper;
     private final SysConfigService configService;
+    private static final String USER_TYPE_TEACHER = "teacher";
+    private static final String ROLE_CAPTAIN = "队长";
+    private static final String ROLE_MEMBER = "队员";
+    private static final String ROLE_TEACHER = "指导教师";
+    private static final String TEAM_NAME_FALLBACK = "已解散的团队";
 
     /**
      * 新建获奖记录（草稿）。
@@ -181,6 +207,111 @@ public class AwardRecordServiceImpl implements AwardRecordService {
                         .eq(BizAwardRecord::getSubmitterUserId, uid)
                         .orderByDesc(BizAwardRecord::getUpdatedAt));
         return PageResult.of(page.getTotal(), page.getRecords());
+    }
+
+    @Override
+    public List<MyAwardVO> getMyAwards(Long userId, String userType) {
+        Map<Long, String> roleByTeam = USER_TYPE_TEACHER.equalsIgnoreCase(userType)
+                ? getTeacherTeams(userId)
+                : getStudentTeams(userId);
+        if (roleByTeam.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<Long> teamIds = new ArrayList<>(roleByTeam.keySet());
+        List<BizAwardRecord> records = recordMapper.selectList(new LambdaQueryWrapper<BizAwardRecord>()
+                .eq(BizAwardRecord::getStatus, "APPROVED")
+                .eq(BizAwardRecord::getDeleted, 0)
+                .in(BizAwardRecord::getTeamId, teamIds)
+                .orderByDesc(BizAwardRecord::getAwardDate)
+                .orderByDesc(BizAwardRecord::getId));
+        if (records.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Map<Long, BizTeam> teamMap = loadTeamMap(records);
+        Map<Long, String> competitionNameMap = loadCompetitionNameMap(records);
+        Map<Long, String> awardLevelNameMap = loadAwardLevelNameMap(records);
+        List<MyAwardVO> out = new ArrayList<>(records.size());
+        for (BizAwardRecord record : records) {
+            MyAwardVO vo = new MyAwardVO();
+            BizTeam team = teamMap.get(record.getTeamId());
+            vo.setRecordId(record.getId());
+            vo.setTeamId(record.getTeamId());
+            vo.setTeamDeleted(team != null && Integer.valueOf(1).equals(team.getDeleted()));
+            vo.setTeamName(team != null && team.getTeamName() != null && !team.getTeamName().isBlank()
+                    ? team.getTeamName()
+                    : TEAM_NAME_FALLBACK);
+            vo.setCompetitionName(competitionNameMap.get(record.getCompetitionId()));
+            vo.setAwardName(record.getProjectName());
+            vo.setAwardLevel(awardLevelNameMap.get(record.getAwardLevelId()));
+            vo.setAwardTime(record.getAwardDate());
+            vo.setRole(roleByTeam.getOrDefault(record.getTeamId(), ROLE_MEMBER));
+            out.add(vo);
+        }
+        return out;
+    }
+
+    private Map<Long, String> getStudentTeams(Long userId) {
+        List<BizTeamMember> memberships = teamMemberMapper.selectList(new LambdaQueryWrapper<BizTeamMember>()
+                .eq(BizTeamMember::getUserId, userId)
+                .eq(BizTeamMember::getJoinStatus, "ACCEPTED"));
+        if (memberships.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> roleByTeam = new LinkedHashMap<>();
+        for (BizTeamMember member : memberships) {
+            if (member.getTeamId() == null) {
+                continue;
+            }
+            String role = Integer.valueOf(1).equals(member.getIsCaptain()) ? ROLE_CAPTAIN : ROLE_MEMBER;
+            roleByTeam.merge(member.getTeamId(), role, (oldRole, newRole) -> ROLE_CAPTAIN.equals(oldRole) ? oldRole : newRole);
+        }
+        return roleByTeam;
+    }
+
+    private Map<Long, String> getTeacherTeams(Long userId) {
+        List<BizTeamTeacher> relations = teamTeacherMapper.selectList(new LambdaQueryWrapper<BizTeamTeacher>()
+                .eq(BizTeamTeacher::getTeacherUserId, userId)
+                .eq(BizTeamTeacher::getJoinStatus, "ACCEPTED"));
+        if (relations.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<Long, String> roleByTeam = new LinkedHashMap<>();
+        for (BizTeamTeacher relation : relations) {
+            if (relation.getTeamId() != null) {
+                roleByTeam.put(relation.getTeamId(), ROLE_TEACHER);
+            }
+        }
+        return roleByTeam;
+    }
+
+    private Map<Long, BizTeam> loadTeamMap(List<BizAwardRecord> records) {
+        Set<Long> teamIds = records.stream().map(BizAwardRecord::getTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (teamIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BizTeam> teams = teamMapper.selectBatchIds(teamIds);
+        return teams.stream().collect(Collectors.toMap(BizTeam::getId, t -> t, (a, b) -> a));
+    }
+
+    private Map<Long, String> loadCompetitionNameMap(List<BizAwardRecord> records) {
+        Set<Long> competitionIds = records.stream().map(BizAwardRecord::getCompetitionId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (competitionIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<DictCompetition> competitions = competitionMapper.selectBatchIds(competitionIds);
+        return competitions.stream().collect(Collectors.toMap(DictCompetition::getId, DictCompetition::getCompetitionName, (a, b) -> a));
+    }
+
+    private Map<Long, String> loadAwardLevelNameMap(List<BizAwardRecord> records) {
+        Set<Long> awardLevelIds = records.stream().map(BizAwardRecord::getAwardLevelId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (awardLevelIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<DictAwardLevel> levels = awardLevelMapper.selectBatchIds(awardLevelIds);
+        return levels.stream().collect(Collectors.toMap(DictAwardLevel::getId, DictAwardLevel::getLevelName, (a, b) -> a));
     }
 
     /**

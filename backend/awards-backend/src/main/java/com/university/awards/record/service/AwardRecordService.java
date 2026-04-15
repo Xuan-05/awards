@@ -2,6 +2,9 @@ package com.university.awards.record.service;
 
 import com.university.awards.common.PageResult;
 import com.university.awards.record.entity.BizAwardRecord;
+import com.university.awards.record.vo.MyAwardVO;
+
+import java.util.List;
 
 /**
  * 获奖记录（竞赛填报）领域服务接口。
@@ -52,6 +55,14 @@ public interface AwardRecordService {
      * @param semester 学期（可选）
      */
     PageResult<BizAwardRecord> myPage(String status, Long teamId, Long competitionId, String semester, long pageNo, long pageSize);
+
+    /**
+     * 查询“我的获奖”列表（仅审核通过）。
+     *
+     * @param userId 当前用户 ID
+     * @param userType 用户类型：student 或 teacher
+     */
+    List<MyAwardVO> getMyAwards(Long userId, String userType);
 
     /**
      * 提交记录进入校级审核。

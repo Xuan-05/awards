@@ -59,6 +59,7 @@ function getIcon(item: MenuItem) {
     '工作台': 'workbench',
     '我的团队': 'team',
     '竞赛填报': 'form',
+    '我的获奖': 'award',
     '消息中心': 'message',
     '个人中心': 'profile',
   }
@@ -169,6 +170,11 @@ function getIcon(item: MenuItem) {
             <svg v-else-if="getIcon(item) === 'form'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+            <!-- Award -->
+            <svg v-else-if="getIcon(item) === 'award'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="8" r="7"/>
+              <polyline points="8.21,13.89 7,23 12,20 17,23 15.79,13.88"/>
             </svg>
             <!-- Message -->
             <svg v-else-if="getIcon(item) === 'message'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

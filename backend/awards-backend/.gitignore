@@ -34,3 +34,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Runtime business data (do not version) ###
+data/files/**
+!data/files/.gitkeep
+
+### Local database snapshots (optional, local only) ###
+db/snapshots/local/**
+!db/snapshots/local/.gitkeep

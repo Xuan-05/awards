@@ -60,6 +60,7 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private static final String ROLE_MEMBER = "队员";
     private static final String ROLE_TEACHER = "指导教师";
     private static final String TEAM_NAME_FALLBACK = "已解散的团队";
+    private static final List<String> VISIBLE_JOIN_STATUS = List.of("ACCEPTED", "PENDING");
 
     /**
      * 新建获奖记录（草稿）。
@@ -262,7 +263,7 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private Map<Long, String> getStudentTeams(Long userId) {
         List<BizTeamMember> memberships = teamMemberMapper.selectList(new LambdaQueryWrapper<BizTeamMember>()
                 .eq(BizTeamMember::getUserId, userId)
-                .eq(BizTeamMember::getJoinStatus, "ACCEPTED"));
+                .in(BizTeamMember::getJoinStatus, VISIBLE_JOIN_STATUS));
         if (memberships.isEmpty()) {
             return Collections.emptyMap();
         }
@@ -280,7 +281,7 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private Map<Long, String> getTeacherTeams(Long userId) {
         List<BizTeamTeacher> relations = teamTeacherMapper.selectList(new LambdaQueryWrapper<BizTeamTeacher>()
                 .eq(BizTeamTeacher::getTeacherUserId, userId)
-                .eq(BizTeamTeacher::getJoinStatus, "ACCEPTED"));
+                .in(BizTeamTeacher::getJoinStatus, VISIBLE_JOIN_STATUS));
         if (relations.isEmpty()) {
             return Collections.emptyMap();
         }

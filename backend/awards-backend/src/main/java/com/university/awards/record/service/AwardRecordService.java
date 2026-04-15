@@ -60,9 +60,8 @@ public interface AwardRecordService {
      * 查询“我的获奖”列表（仅审核通过）。
      *
      * @param userId 当前用户 ID
-     * @param userType 用户类型：student 或 teacher
      */
-    List<MyAwardVO> getMyAwards(Long userId, String userType);
+    List<MyAwardVO> getMyAwards(Long userId);
 
     /**
      * 提交记录进入校级审核。

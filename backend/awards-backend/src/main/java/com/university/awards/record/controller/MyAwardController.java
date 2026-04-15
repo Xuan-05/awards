@@ -22,7 +22,6 @@ public class MyAwardController {
     @GetMapping("/my-awards")
     public ApiResponse<List<MyAwardVO>> myAwards() {
         Long userId = authzService.currentUserId();
-        String userType = authzService.hasAnyRole("TEACHER") ? "teacher" : "student";
-        return ApiResponse.ok(awardRecordService.getMyAwards(userId, userType));
+        return ApiResponse.ok(awardRecordService.getMyAwards(userId));
     }
 }

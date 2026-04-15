@@ -26,6 +26,7 @@ import com.university.awards.team.mapper.BizTeamMapper;
 import com.university.awards.team.mapper.BizTeamMemberMapper;
 import com.university.awards.team.mapper.BizTeamTeacherMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,7 +34,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -41,6 +41,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AwardRecordServiceImpl implements AwardRecordService {
 
@@ -55,7 +56,6 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private final AuthzService authz;
     private final BizAwardRecordFileMapper recordFileMapper;
     private final SysConfigService configService;
-    private static final String USER_TYPE_TEACHER = "teacher";
     private static final String ROLE_CAPTAIN = "队长";
     private static final String ROLE_MEMBER = "队员";
     private static final String ROLE_TEACHER = "指导教师";
@@ -210,11 +210,17 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     }
 
     @Override
-    public List<MyAwardVO> getMyAwards(Long userId, String userType) {
-        Map<Long, String> roleByTeam = USER_TYPE_TEACHER.equalsIgnoreCase(userType)
-                ? getTeacherTeams(userId)
-                : getStudentTeams(userId);
+    public List<MyAwardVO> getMyAwards(Long userId) {
+        Map<Long, String> roleByTeam = new LinkedHashMap<>();
+        Map<Long, String> studentRoleByTeam = getStudentTeams(userId);
+        roleByTeam.putAll(studentRoleByTeam);
+        Map<Long, String> teacherRoleByTeam = getTeacherTeams(userId);
+        // union_both: 同一团队同时命中时，教师角色优先
+        teacherRoleByTeam.forEach(roleByTeam::put);
+        log.info("getMyAwards userId={}, studentTeams={}, teacherTeams={}, mergedTeams={}",
+                userId, studentRoleByTeam.size(), teacherRoleByTeam.size(), roleByTeam.size());
         if (roleByTeam.isEmpty()) {
+            log.info("getMyAwards userId={} no team relation found", userId);
             return Collections.emptyList();
         }
 
@@ -225,6 +231,7 @@ public class AwardRecordServiceImpl implements AwardRecordService {
                 .in(BizAwardRecord::getTeamId, teamIds)
                 .orderByDesc(BizAwardRecord::getAwardDate)
                 .orderByDesc(BizAwardRecord::getId));
+        log.info("getMyAwards userId={} approvedRecords={}", userId, records.size());
         if (records.isEmpty()) {
             return Collections.emptyList();
         }

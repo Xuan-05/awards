@@ -11,7 +11,6 @@ type Row = {
   awardScopeId: number;
   levelName: string;
   enabled: number;
-  sortNo: number;
 };
 
 const loading = ref(false);
@@ -72,21 +71,18 @@ const editingId = ref<number | null>(null);
 const form = reactive({
   awardScopeId: undefined as number | undefined,
   levelName: "",
-  sortNo: 0,
 });
 
 function openCreate() {
   editingId.value = null;
   form.awardScopeId = query.awardScopeId;
   form.levelName = "";
-  form.sortNo = 0;
   dialogOpen.value = true;
 }
 function openEdit(row: Row) {
   editingId.value = row.id;
   form.awardScopeId = row.awardScopeId;
   form.levelName = row.levelName;
-  form.sortNo = row.sortNo ?? 0;
   dialogOpen.value = true;
 }
 
@@ -96,17 +92,19 @@ async function save() {
     return;
   }
   if (editingId.value) {
-    const resp = await http.put<ApiResponse<null>>(
-      `/dicts/award-levels/${editingId.value}`,
-      form,
-    );
+    const resp = await http.put<ApiResponse<null>>(`/dicts/award-levels/${editingId.value}`, {
+      awardScopeId: form.awardScopeId,
+      levelName: form.levelName,
+      sortNo: 0,
+    });
     if (resp.data.code !== 0) throw new Error(resp.data.message);
     ElMessage.success("已保存");
   } else {
-    const resp = await http.post<ApiResponse<number>>(
-      "/dicts/award-levels",
-      form,
-    );
+    const resp = await http.post<ApiResponse<number>>("/dicts/award-levels", {
+      awardScopeId: form.awardScopeId,
+      levelName: form.levelName,
+      sortNo: 0,
+    });
     if (resp.data.code !== 0) throw new Error(resp.data.message);
     ElMessage.success("已创建");
   }
@@ -208,9 +206,6 @@ onMounted(async () => {
           <!-- 等级名称 -->
           <el-table-column prop="levelName" label="等级名称" min-width="220" align="left" />
 
-          <!-- 排序 -->
-          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
-
           <!-- 状态 -->
           <el-table-column prop="enabled" label="状态" width="100" align="center">
             <template #default="{ row }">
@@ -251,10 +246,6 @@ onMounted(async () => {
         <div class="form-item full">
           <label>等级名称 <span class="required">*</span></label>
           <el-input v-model="form.levelName" placeholder="请输入等级名称" />
-        </div>
-        <div class="form-item">
-          <label>排序</label>
-          <el-input-number v-model="form.sortNo" :min="0" style="width:100%" />
         </div>
       </div>
       <template #footer>

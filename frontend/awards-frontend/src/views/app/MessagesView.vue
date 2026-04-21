@@ -238,7 +238,9 @@ function formatTime(time: string): string {
   if (minutes < 60) return `${minutes}分钟前`;
   if (hours < 24) return `${hours}小时前`;
   if (days < 7) return `${days}天前`;
-  return time.slice(0, 10);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}年${month}月${day}日`;
 }
 
 // 格式化完整日期时间：2026-03-25T19:49:29 -> 2026年3月25日 19:49

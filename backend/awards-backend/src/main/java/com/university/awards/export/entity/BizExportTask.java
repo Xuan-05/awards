@@ -13,7 +13,7 @@ public class BizExportTask {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String exportType; // DETAIL/SUMMARY
+    private String exportType; // 例如 DISCIPLINE_STATS
     private String fileName;
     private String filePath;
     private String filterJson;

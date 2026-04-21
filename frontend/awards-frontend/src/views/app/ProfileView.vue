@@ -191,7 +191,7 @@ const showNewPwd = ref(false)
                 </div>
                 <div class="detail-content">
                   <span class="detail-label">院系</span>
-                  <span class="detail-value">{{ user.me?.deptId ? `院系 #${user.me.deptId}` : '-' }}</span>
+                  <span class="detail-value">{{ user.me?.deptId ? '已分配院系' : '-' }}</span>
                 </div>
               </div>
 
@@ -206,7 +206,7 @@ const showNewPwd = ref(false)
                 </div>
                 <div class="detail-content">
                   <span class="detail-label">班级</span>
-                  <span class="detail-value">{{ user.me?.className || (user.me?.classId ? `#${user.me.classId}` : '-') }}</span>
+                  <span class="detail-value">{{ user.me?.className || '-' }}</span>
                 </div>
               </div>
 

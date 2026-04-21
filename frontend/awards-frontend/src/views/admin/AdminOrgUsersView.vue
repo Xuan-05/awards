@@ -73,6 +73,12 @@ const classNameById = computed(() => {
   return m;
 });
 
+function loginIdText(row: UserRow) {
+  if (row.userType === "STUDENT") return row.studentNo || row.username;
+  if (row.userType === "TEACHER") return row.teacherNo || row.username;
+  return row.username;
+}
+
 async function loadDepts() {
   deptsLoading.value = true;
   try {
@@ -178,7 +184,7 @@ async function resetPassword(row: UserRow) {
     return;
   }
   await ElMessageBox.confirm(
-    `确认重置「${row.realName}」密码为 Admin123! 吗？`,
+    `确认重置「${row.realName}」密码为 123456 吗？`,
     "提示",
     { type: "warning" },
   );
@@ -341,7 +347,11 @@ onMounted(async () => {
         :fit="false"
       >
         <el-table-column prop="id" label="编号" width="70" align="center" show-overflow-tooltip />
-        <el-table-column prop="username" label="账号" width="124" align="center" show-overflow-tooltip />
+        <el-table-column label="登录标识" width="124" align="center" show-overflow-tooltip>
+          <template #default="{ row }">
+            {{ loginIdText(row) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="realName" label="姓名" width="93" align="center" show-overflow-tooltip />
         <el-table-column prop="userType" label="类型" width="93" align="center" show-overflow-tooltip>
           <template #default="{ row }">
@@ -352,13 +362,13 @@ onMounted(async () => {
         </el-table-column>
         <el-table-column label="院系" width="130" align="center" show-overflow-tooltip>
           <template #default="{ row }">
-            {{ deptNameById[row.deptId] || `ID:${row.deptId}` }}
+            {{ deptNameById[row.deptId] || '-' }}
           </template>
         </el-table-column>
         <el-table-column label="班级" width="100" align="center" show-overflow-tooltip>
           <template #default="{ row }">
             <span v-if="row.userType === 'STUDENT'">
-              {{ row.classId ? (classNameById[row.classId] || `ID:${row.classId}`) : '-' }}
+              {{ row.classId ? (classNameById[row.classId] || '-') : '-' }}
             </span>
             <span v-else class="text-muted">-</span>
           </template>
@@ -438,7 +448,7 @@ onMounted(async () => {
     >
       <div class="dialog-user-info">
         <span class="dialog-user-name">{{ profileEditing?.realName }}</span>
-        <span class="dialog-user-account">{{ profileEditing?.username }}</span>
+        <span class="dialog-user-account">{{ profileEditing ? loginIdText(profileEditing) : '-' }}</span>
       </div>
       <el-form label-width="80px">
         <el-form-item label="院系">

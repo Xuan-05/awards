@@ -8,24 +8,25 @@ import com.university.awards.export.entity.BizExportTask;
  *
  * <p>职责：</p>
  * <ul>
- *   <li>创建导出任务（明细/汇总），生成文件并更新任务状态。</li>
+ *   <li>创建导出任务并生成文件，更新任务状态。</li>
  *   <li>控制数据范围：例如 DEPT_ADMIN 导出仅限本院系已通过记录。</li>
  *   <li>控制任务可见性：非校级/系统管理员通常只能查看/下载自己创建的任务。</li>
  * </ul>
  */
 public interface ExportService {
     /**
-     * 创建“明细”导出任务。
+     * 创建导出任务（统一入口）。
      *
-     * @param filterJson 过滤条件（JSON 字符串，可为 null；由实现解析）
+     * @param reportCode 报表编码，例如 DISCIPLINE_STATS
+     * @param filterJson 过滤条件（JSON 字符串，可为 null）
      * @return 任务 ID
      */
-    Long createDetailExport(String filterJson);
+    Long createExport(String reportCode, String filterJson);
 
     /**
-     * 创建“汇总”导出任务。
+     * 返回可导出的报表列表。
      */
-    Long createSummaryExport(String filterJson);
+    java.util.List<com.university.awards.export.vo.ExportReportOption> listReports();
 
     /**
      * 查询我创建的导出任务列表（分页）。

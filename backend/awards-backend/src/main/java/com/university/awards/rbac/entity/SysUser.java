@@ -16,7 +16,7 @@ public class SysUser {
     private String username;
     private String passwordHash;
     private String realName;
-    private String userType; // STUDENT/TEACHER/ADMIN
+    private String userType; // STUDENT/TEACHER/ADMIN/REVIEWER
     private Long deptId;
     /**
      * 学生学号（可空；非空唯一）。

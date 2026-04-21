@@ -42,7 +42,7 @@ const expectedPortal = ref<'app' | 'admin'>('app')
  */
 async function onSubmit() {
   if (!form.username || !form.password) {
-    ElMessage.warning('请输入用户名和密码')
+    ElMessage.warning('请输入学号/工号/账号和密码')
     return
   }
   loading.value = true
@@ -61,9 +61,15 @@ async function onSubmit() {
     user.setMe(resp.data.data.userInfo)
 
     const roles = resp.data.data.userInfo.roles || []
-    const isAdmin = roles.includes('DEPT_ADMIN') || roles.includes('SCHOOL_ADMIN') || roles.includes('SYS_ADMIN')
-    const actualPortal: 'app' | 'admin' = isAdmin ? 'admin' : 'app'
-    const target = actualPortal === 'admin' ? '/admin/dashboard' : '/app/workbench'
+    const actualPortal: 'app' | 'admin' =
+      roles.includes('DEPT_ADMIN') ||
+      roles.includes('SCHOOL_ADMIN') ||
+      roles.includes('SYS_ADMIN') ||
+      roles.includes('COMP_REVIEWER_L1') ||
+      roles.includes('COMP_REVIEWER_L2')
+        ? 'admin'
+        : 'app'
+    const target = user.homePath
 
     // 若用户“期望端”和账号实际可访问端不一致，给出提示（但仍以权限为准跳转）
     if (expectedPortal.value !== actualPortal) {
@@ -199,7 +205,7 @@ async function onSubmit() {
         <!-- 登录表单 -->
         <form class="login-form" @submit.prevent="onSubmit">
           <div class="input-group" :class="{ focused: focusedField === 'username', filled: form.username }">
-            <label>用户名</label>
+            <label>学号/工号/账号</label>
             <div class="input-wrapper">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
@@ -211,6 +217,7 @@ async function onSubmit() {
                 @focus="focusedField = 'username'"
                 @blur="focusedField = ''"
                 autocomplete="username"
+                placeholder="请输入学号/工号/账号"
                 required
               />
             </div>

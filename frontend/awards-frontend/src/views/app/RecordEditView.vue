@@ -94,8 +94,17 @@ const form = reactive({
 
 const teams = ref<Team[]>([]);
 const competitions = ref<DictCompetition[]>([]);
+const competitionKeyword = ref("");
 const scopes = ref<DictAwardScope[]>([]);
 const levelsAll = ref<DictAwardLevel[]>([]);
+
+const filteredCompetitions = computed(() => {
+  const keyword = competitionKeyword.value.trim();
+  if (!keyword) return competitions.value;
+  return competitions.value.filter((item) =>
+    item.competitionName.toLowerCase().includes(keyword.toLowerCase()),
+  );
+});
 
 const levels = computed(() => {
   if (!form.awardScopeId) return [];
@@ -505,6 +514,15 @@ function triggerUpload() {
   if (!recordId.value) return;
   fileInput.value?.click();
 }
+
+function formatDateCn(input?: string) {
+  if (!input) return "-";
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return input;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}年${month}月${day}日`;
+}
 </script>
 
 <template>
@@ -571,9 +589,15 @@ function triggerUpload() {
 
         <div class="form-group">
           <label class="form-label required">参赛竞赛</label>
+          <input
+            type="text"
+            v-model="competitionKeyword"
+            placeholder="输入关键字筛选竞赛"
+            class="form-input"
+          />
           <select v-model="form.competitionId" class="form-select">
             <option :value="undefined" disabled>请选择竞赛</option>
-            <option v-for="c in competitions" :key="c.id" :value="c.id">
+            <option v-for="c in filteredCompetitions" :key="c.id" :value="c.id">
               {{ c.competitionName }}
             </option>
           </select>
@@ -655,6 +679,7 @@ function triggerUpload() {
               :editable="false"
               class="record-edit-date"
             />
+            <p class="form-hint warning">获奖日期以获奖证书上的时间为准</p>
           </div>
 
           <div class="form-group half ep-field">
@@ -754,7 +779,7 @@ function triggerUpload() {
             </div>
             <div class="file-info">
               <span class="file-id">文件 #{{ rel.fileId }}</span>
-              <span class="file-time">{{ rel.createdAt || "-" }}</span>
+              <span class="file-time">{{ formatDateCn(rel.createdAt) }}</span>
             </div>
             <div class="file-actions">
               <button class="file-btn preview" @click="preview(rel.fileId)">

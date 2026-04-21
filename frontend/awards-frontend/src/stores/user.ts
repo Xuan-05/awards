@@ -51,7 +51,21 @@ export const useUserStore = defineStore('user', {
     /** 是否管理员端角色（用于决定默认落地端） */
     isAdmin: (s) => {
       const set = new Set(s.me?.roles || [])
-      return set.has('DEPT_ADMIN') || set.has('SCHOOL_ADMIN') || set.has('SYS_ADMIN')
+      return (
+        set.has('DEPT_ADMIN') ||
+        set.has('SCHOOL_ADMIN') ||
+        set.has('SYS_ADMIN') ||
+        set.has('COMP_REVIEWER_L1') ||
+        set.has('COMP_REVIEWER_L2')
+      )
+    },
+    /** 默认落地页：按角色决定登录后进入哪个工作台 */
+    homePath: (s) => {
+      const set = new Set(s.me?.roles || [])
+      if (set.has('DEPT_ADMIN') || set.has('SCHOOL_ADMIN') || set.has('SYS_ADMIN')) return '/admin/dashboard'
+      if (set.has('COMP_REVIEWER_L1')) return '/admin/audit/l1'
+      if (set.has('COMP_REVIEWER_L2')) return '/admin/audit/l2'
+      return '/app/workbench'
     },
   },
   actions: {

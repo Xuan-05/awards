@@ -7,9 +7,13 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.university.awards.common.PageResult;
 import com.university.awards.team.dto.TeamAdminListRow;
 import com.university.awards.message.service.MessageWriteService;
+import com.university.awards.record.entity.BizAwardRecord;
+import com.university.awards.record.mapper.BizAwardRecordMapper;
 import com.university.awards.rbac.service.AuthzService;
 import com.university.awards.rbac.entity.SysUser;
 import com.university.awards.rbac.mapper.SysUserMapper;
+import com.university.awards.reviewer.entity.BizReviewerCompScope;
+import com.university.awards.reviewer.mapper.BizReviewerCompScopeMapper;
 import com.university.awards.systemconfig.service.SysConfigService;
 import com.university.awards.team.entity.*;
 import com.university.awards.team.mapper.*;
@@ -37,6 +41,8 @@ public class TeamServiceImpl implements TeamService {
     private final BizTeamInvitationMapper invitationMapper;
     private final AuthzService authz;
     private final SysUserMapper userMapper;
+    private final BizAwardRecordMapper awardRecordMapper;
+    private final BizReviewerCompScopeMapper reviewerCompScopeMapper;
     private final MessageWriteService messageWriteService;
     private final SysConfigService configService;
 
@@ -163,7 +169,22 @@ public class TeamServiceImpl implements TeamService {
         Long uid = StpUtil.getLoginIdAsLong();
         BizTeam team = teamMapper.selectById(id);
         if (team == null || team.getDeleted() != null && team.getDeleted() == 1) throw new BizException(404, "团队不存在");
-        if (!authz.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN")) {
+        boolean canViewAsAdmin = authz.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        boolean canViewAsL2 = authz.hasRole("COMP_REVIEWER_L2")
+                && awardRecordMapper.selectCount(new LambdaQueryWrapper<BizAwardRecord>()
+                .eq(BizAwardRecord::getTeamId, id)
+                .eq(BizAwardRecord::getDeleted, 0)) > 0;
+        boolean canViewAsL1 = false;
+        if (authz.hasRole("COMP_REVIEWER_L1")) {
+            Set<Long> allowedCompetitionIds = loadAllowedCompetitionIds(uid);
+            if (!allowedCompetitionIds.isEmpty()) {
+                canViewAsL1 = awardRecordMapper.selectCount(new LambdaQueryWrapper<BizAwardRecord>()
+                        .eq(BizAwardRecord::getTeamId, id)
+                        .in(BizAwardRecord::getCompetitionId, allowedCompetitionIds)
+                        .eq(BizAwardRecord::getDeleted, 0)) > 0;
+            }
+        }
+        if (!canViewAsAdmin && !canViewAsL1 && !canViewAsL2) {
             boolean inTeam = memberMapper.selectCount(new LambdaQueryWrapper<BizTeamMember>()
                     .eq(BizTeamMember::getTeamId, id)
                     .eq(BizTeamMember::getUserId, uid)
@@ -505,6 +526,20 @@ public class TeamServiceImpl implements TeamService {
     private UserBrief toBrief(SysUser u) {
         if (u == null) return null;
         return new UserBrief(u.getId(), u.getUsername(), u.getRealName(), u.getUserType(), u.getDeptId());
+    }
+
+    private Set<Long> loadAllowedCompetitionIds(Long userId) {
+        LocalDateTime now = LocalDateTime.now();
+        return reviewerCompScopeMapper.selectList(
+                        new LambdaQueryWrapper<BizReviewerCompScope>()
+                                .eq(BizReviewerCompScope::getReviewerUserId, userId)
+                                .eq(BizReviewerCompScope::getEnabled, 1)
+                                .and(w -> w.isNull(BizReviewerCompScope::getValidFrom).or().le(BizReviewerCompScope::getValidFrom, now))
+                                .and(w -> w.isNull(BizReviewerCompScope::getValidTo).or().ge(BizReviewerCompScope::getValidTo, now)))
+                .stream()
+                .map(BizReviewerCompScope::getCompetitionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
     }
 }
 

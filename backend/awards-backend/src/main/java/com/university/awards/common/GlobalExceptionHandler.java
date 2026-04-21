@@ -30,6 +30,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ApiResponse<Void> handleAny(Exception e) {
         log.error("Unhandled exception", e);
-        return ApiResponse.fail(500, "服务器内部错误");
+        String msg = (e.getMessage() == null || e.getMessage().isBlank()) ? "服务器内部错误" : ("服务器内部错误: " + e.getMessage());
+        return ApiResponse.fail(500, msg);
     }
 }

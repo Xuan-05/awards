@@ -59,13 +59,14 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ApiResponse<LoginResp> login(@RequestBody @Valid LoginReq req, HttpServletRequest request) {
-        SysUser user = rbacService.findByUsername(req.getUsername());
+        String loginId = req.getUsername() == null ? "" : req.getUsername().trim();
+        SysUser user = loadUserByLoginId(loginId);
         if (user == null || user.getEnabled() == null || user.getEnabled() != 1) {
-            writeLoginLog(req.getUsername(), null, 0, "用户名或密码错误", request);
+            writeLoginLog(loginId, null, 0, "用户名或密码错误", request);
             throw new BizException(401, "用户名或密码错误");
         }
         if (!BCrypt.checkpw(req.getPassword(), user.getPasswordHash())) {
-            writeLoginLog(req.getUsername(), user.getId(), 0, "用户名或密码错误", request);
+            writeLoginLog(loginId, user.getId(), 0, "用户名或密码错误", request);
             throw new BizException(401, "用户名或密码错误");
         }
         StpUtil.login(user.getId());
@@ -73,7 +74,7 @@ public class AuthController {
         LoginResp resp = new LoginResp();
         resp.setToken(StpUtil.getTokenValue());
         resp.setUserInfo(buildUserInfo(user));
-        writeLoginLog(req.getUsername(), user.getId(), 1, null, request);
+        writeLoginLog(loginId, user.getId(), 1, null, request);
         return ApiResponse.ok(resp);
     }
 
@@ -251,6 +252,18 @@ public class AuthController {
         if (s == null) return null;
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private SysUser loadUserByLoginId(String loginId) {
+        if (loginId == null || loginId.isBlank()) {
+            return null;
+        }
+        // 优先按学号/工号识别，兼容旧账号（username）登录。
+        SysUser byStudentNo = rbacService.findByStudentNo(loginId);
+        if (byStudentNo != null) return byStudentNo;
+        SysUser byTeacherNo = rbacService.findByTeacherNo(loginId);
+        if (byTeacherNo != null) return byTeacherNo;
+        return rbacService.findByUsername(loginId);
     }
 
     private void writeLoginLog(String username, Long userId, int success, String err, HttpServletRequest request) {

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useUserStore } from "../../stores/user";
+import { http } from "../../api/http";
 import { labelRoleCode } from "../../utils/displayLabels";
+import type { ApiResponse } from "../../types/api";
 
 const router = useRouter();
 const user = useUserStore();
@@ -28,10 +30,45 @@ const roleLabel = computed(() => {
   return labelRoleCode(role)
 });
 
+const unreadCount = ref(0);
+let unreadTimer: number | null = null;
+
+async function loadUnreadCount() {
+  if (!user.authed) {
+    unreadCount.value = 0;
+    return;
+  }
+  const resp = await http.get<ApiResponse<{ unreadCount: number }>>("/messages/unread-count");
+  if (resp.data.code === 0) {
+    unreadCount.value = resp.data.data.unreadCount || 0;
+  }
+}
+
+async function openMessages() {
+  const target = user.isAdmin ? "/admin/messages" : "/app/messages";
+  if (router.currentRoute.value.path !== target) {
+    await router.push(target);
+  }
+}
+
 async function logout() {
   await user.logout();
   await router.replace("/login");
 }
+
+onMounted(() => {
+  void loadUnreadCount();
+  unreadTimer = window.setInterval(() => {
+    void loadUnreadCount();
+  }, 30000);
+});
+
+onUnmounted(() => {
+  if (unreadTimer != null) {
+    window.clearInterval(unreadTimer);
+    unreadTimer = null;
+  }
+});
 </script>
 
 <template>
@@ -56,12 +93,12 @@ async function logout() {
     <!-- 右侧用户区 -->
     <div class="header-right">
       <!-- 通知图标 -->
-      <button class="header-icon-btn" title="消息通知">
+      <button class="header-icon-btn" title="消息通知" @click="openMessages">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
           <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
         </svg>
-        <span class="badge">3</span>
+        <span class="badge" v-if="unreadCount > 0">{{ unreadCount > 99 ? "99+" : unreadCount }}</span>
       </button>
 
       <!-- 用户信息 -->

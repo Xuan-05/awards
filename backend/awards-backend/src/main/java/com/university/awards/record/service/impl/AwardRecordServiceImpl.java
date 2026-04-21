@@ -12,12 +12,16 @@ import com.university.awards.dict.entity.DictCompetition;
 import com.university.awards.dict.mapper.DictAwardLevelMapper;
 import com.university.awards.dict.mapper.DictCompetitionMapper;
 import com.university.awards.dict.service.DictCompetitionService;
+import com.university.awards.rbac.entity.SysUser;
+import com.university.awards.rbac.mapper.SysUserMapper;
 import com.university.awards.rbac.service.AuthzService;
 import com.university.awards.record.entity.BizAwardRecord;
 import com.university.awards.record.mapper.BizAwardRecordMapper;
 import com.university.awards.record.mapper.BizAwardRecordFileMapper;
 import com.university.awards.record.service.AwardRecordService;
 import com.university.awards.record.vo.MyAwardVO;
+import com.university.awards.reviewer.entity.BizReviewerCompScope;
+import com.university.awards.reviewer.mapper.BizReviewerCompScopeMapper;
 import com.university.awards.systemconfig.service.SysConfigService;
 import com.university.awards.team.entity.BizTeam;
 import com.university.awards.team.entity.BizTeamMember;
@@ -54,6 +58,8 @@ public class AwardRecordServiceImpl implements AwardRecordService {
     private final BizTeamMemberMapper teamMemberMapper;
     private final BizTeamTeacherMapper teamTeacherMapper;
     private final AuthzService authz;
+    private final SysUserMapper userMapper;
+    private final BizReviewerCompScopeMapper reviewerCompScopeMapper;
     private final BizAwardRecordFileMapper recordFileMapper;
     private final SysConfigService configService;
     private static final String ROLE_CAPTAIN = "队长";
@@ -177,8 +183,11 @@ public class AwardRecordServiceImpl implements AwardRecordService {
         BizAwardRecord e = recordMapper.selectById(id);
         if (e == null || e.getDeleted() != null && e.getDeleted() == 1)
             throw new BizException(404, "记录不存在");
-        if (!authz.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN")
-                && (e.getSubmitterUserId() == null || !uid.equals(e.getSubmitterUserId()))) {
+        boolean canViewAsAdmin = authz.hasAnyRole("SCHOOL_ADMIN", "SYS_ADMIN");
+        boolean canViewAsL2Reviewer = authz.hasRole("COMP_REVIEWER_L2");
+        boolean canViewAsL1Reviewer = authz.hasRole("COMP_REVIEWER_L1") && hasL1Scope(uid, e.getCompetitionId());
+        boolean canViewAsSubmitter = e.getSubmitterUserId() != null && uid.equals(e.getSubmitterUserId());
+        if (!canViewAsAdmin && !canViewAsL2Reviewer && !canViewAsL1Reviewer && !canViewAsSubmitter) {
             throw new BizException(403, "无权限");
         }
         return e;
@@ -384,7 +393,9 @@ public class AwardRecordServiceImpl implements AwardRecordService {
         audit.setActionType("SUBMIT");
         audit.setFromStatus(from);
         audit.setToStatus("PENDING_SCHOOL");
+        audit.setAuditStage("SUBMIT");
         audit.setAuditorUserId(uid);
+        audit.setAuditorWorkNo(resolveWorkNo(uid));
         audit.setCreatedAt(LocalDateTime.now());
         auditMapper.insert(audit);
     }
@@ -443,5 +454,35 @@ public class AwardRecordServiceImpl implements AwardRecordService {
         upd.setVersion(e.getVersion());
         upd.setDeleted(1);
         recordMapper.updateById(upd);
+    }
+
+    private String resolveWorkNo(Long userId) {
+        SysUser user = userMapper.selectById(userId);
+        if (user == null) {
+            return "";
+        }
+        if (user.getTeacherNo() != null && !user.getTeacherNo().isBlank()) {
+            return user.getTeacherNo();
+        }
+        if (user.getStudentNo() != null && !user.getStudentNo().isBlank()) {
+            return user.getStudentNo();
+        }
+        return user.getUsername() == null ? "" : user.getUsername();
+    }
+
+    private boolean hasL1Scope(Long userId, Long competitionId) {
+        if (competitionId == null) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        Long count = reviewerCompScopeMapper.selectCount(
+                new LambdaQueryWrapper<BizReviewerCompScope>()
+                        .eq(BizReviewerCompScope::getReviewerUserId, userId)
+                        .eq(BizReviewerCompScope::getCompetitionId, competitionId)
+                        .eq(BizReviewerCompScope::getEnabled, 1)
+                        .and(w -> w.isNull(BizReviewerCompScope::getValidFrom).or().le(BizReviewerCompScope::getValidFrom, now))
+                        .and(w -> w.isNull(BizReviewerCompScope::getValidTo).or().ge(BizReviewerCompScope::getValidTo, now))
+        );
+        return count != null && count > 0;
     }
 }

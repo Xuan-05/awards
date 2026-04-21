@@ -174,7 +174,7 @@ onMounted(async () => {
           <template #default="{ row }">{{ row.teacherCount }}</template>
         </el-table-column>
         <el-table-column label="院系" width="145" align="center">
-          <template #default="{ row }">{{ deptNameById[row.ownerDeptId] || `ID:${row.ownerDeptId}` }}</template>
+          <template #default="{ row }">{{ deptNameById[row.ownerDeptId] || '-' }}</template>
         </el-table-column>
         <el-table-column label="状态" width="100" align="center">
           <template #default="{ row }">{{ labelTeamStatus(row.status) }}</template>

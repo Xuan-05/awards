@@ -9,7 +9,6 @@ type Category = {
   id: number
   categoryName: string
   enabled: number
-  sortNo: number
   remark?: string
 }
 
@@ -43,7 +42,6 @@ const dialogOpen = ref(false)
 const editingId = ref<number | null>(null)
 const form = reactive({
   categoryName: '',
-  sortNo: 0,
   remark: '',
 })
 
@@ -51,7 +49,6 @@ const form = reactive({
 function openCreate() {
   editingId.value = null
   form.categoryName = ''
-  form.sortNo = 0
   form.remark = ''
   dialogOpen.value = true
 }
@@ -60,7 +57,6 @@ function openCreate() {
 function openEdit(row: Category) {
   editingId.value = row.id
   form.categoryName = row.categoryName
-  form.sortNo = row.sortNo ?? 0
   form.remark = row.remark || ''
   dialogOpen.value = true
 }
@@ -73,7 +69,7 @@ async function save() {
   }
   const payload = {
     categoryName: form.categoryName,
-    sortNo: form.sortNo ?? 0,
+    sortNo: 0,
     remark: form.remark || undefined,
   }
   if (editingId.value) {
@@ -168,7 +164,6 @@ onMounted(() => {
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
           <el-table-column prop="remark" label="备注" min-width="180" align="center">
             <template #default="{ row }">
               {{ row.remark || '--' }}
@@ -198,10 +193,6 @@ onMounted(() => {
         <div class="form-item full">
           <label>类别名称 <span class="required">*</span></label>
           <el-input v-model="form.categoryName" placeholder="类别全称" />
-        </div>
-        <div class="form-item">
-          <label>排序</label>
-          <el-input-number v-model="form.sortNo" :min="0" style="width: 100%" />
         </div>
         <div class="form-item full">
           <label>备注</label>

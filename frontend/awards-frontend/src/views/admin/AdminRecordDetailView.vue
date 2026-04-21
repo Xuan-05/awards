@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 /**
  * 校管理员端 - 获奖记录只读详情（/admin/record/detail/:id）
  */
@@ -30,6 +30,12 @@ type AwardRecord = {
   status: string;
   submitTime?: string;
   finalAuditTime?: string;
+  l1AuditorUserId?: number;
+  l1ApprovedAt?: string;
+  l2ReviewFlag?: number;
+  l2ReviewResult?: string;
+  l2ReviewerUserId?: number;
+  l2ReviewedAt?: string;
   remark?: string;
 };
 
@@ -49,6 +55,9 @@ type AuditLog = {
   fromStatus: string;
   toStatus: string;
   commentText?: string;
+  auditStage?: string;
+  auditorWorkNo?: string;
+  rejectTarget?: string;
   createdAt?: string;
 };
 type RecordFileRel = {
@@ -99,6 +108,15 @@ function levelName(id: number) {
 function attachmentLabel(f: RecordFileRel) {
   return f.fileName?.trim() ? f.fileName : `文件 #${f.fileId}`;
 }
+
+function formatDateCn(input?: string) {
+  if (!input) return "-";
+  const date = new Date(input);
+  if (Number.isNaN(date.getTime())) return input;
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}年${month}月${day}日`;
+}
 function preview(fileId: number) {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -116,7 +134,76 @@ function download(fileId: number) {
   window.open(`/api/files/${fileId}/download?Authorization=${encodeURIComponent(token)}`);
 }
 function backToList() {
-  router.push("/admin/audit/tasks");
+  const from = String(route.query.from || '').toLowerCase();
+  if (from === 'l2') {
+    router.push('/admin/audit/l2');
+    return;
+  }
+  if (from === 'approved') {
+    router.push('/admin/records/approved');
+    return;
+  }
+  router.push('/admin/audit/l1');
+}
+
+function labelRejectTarget(t?: string) {
+  if (!t) return "-";
+  if (t === "STUDENT") return "学生";
+  if (t === "L1") return "一级审核人";
+  return t;
+}
+
+function labelL2Result(v?: string) {
+  if (!v) return "-";
+  if (v === "PENDING") return "待复审";
+  if (v === "PASS") return "复审通过";
+  if (v === "REJECT") return "复审驳回";
+  return v;
+}
+
+const latestL2RejectReason = computed(() => {
+  for (let i = logs.value.length - 1; i >= 0; i--) {
+    const item = logs.value[i];
+    if (item.nodeType === "L2" && item.actionType === "REJECT" && item.commentText) {
+      return item.commentText;
+    }
+  }
+  return "-";
+});
+
+const l2Tips = computed(() => {
+  if (!record.value) return "";
+  if (record.value.l2ReviewResult === "REJECT") {
+    return "该记录被二级复审驳回，已退回学生；请重点核对驳回原因与附件一致性。";
+  }
+  if (record.value.l2ReviewResult === "PENDING") {
+    return "该记录处于二级待复审状态，建议优先核验关键字段与证书附件。";
+  }
+  if (record.value.l2ReviewResult === "PASS") {
+    return "该记录已完成二级复审通过。";
+  }
+  return "";
+});
+
+function l2AlertType() {
+  if (record.value?.l2ReviewResult === "REJECT") return "warning";
+  if (record.value?.l2ReviewResult === "PENDING") return "info";
+  if (record.value?.l2ReviewResult === "PASS") return "success";
+  return "info";
+}
+
+function stageTagType(stage?: string) {
+  if (stage === "L2_REVIEW") return "danger";
+  if (stage === "L1_APPROVAL") return "warning";
+  if (stage === "SUBMIT") return "info";
+  return "info";
+}
+
+function copyRecordId(id: number) {
+  navigator.clipboard
+    .writeText(String(id))
+    .then(() => ElMessage.success(`记录ID ${id} 已复制`))
+    .catch(() => ElMessage.warning("复制失败，请手动复制"));
 }
 
 async function loadDicts() {
@@ -220,13 +307,16 @@ onMounted(async () => {
     <div class="page-header">
       <button type="button" class="back-btn" @click="backToList">
         <span class="back-icon">&larr;</span>
-        <span>返回审核列表</span>
+        <span>返回审核台</span>
       </button>
     </div>
 
     <template v-if="record">
       <div class="detail-header">
-        <h1 class="page-title">{{ record.projectName || "未命名项目" }}</h1>
+        <div class="title-wrap">
+          <h1 class="page-title">{{ record.projectName || "未命名项目" }}</h1>
+          <el-button size="small" text type="primary" @click="copyRecordId(record.id)">复制记录ID</el-button>
+        </div>
         <span
           :class="[
             'status-pill',
@@ -236,6 +326,7 @@ onMounted(async () => {
           {{ labelRecordStatus(record.status) }}
         </span>
       </div>
+      <el-alert v-if="l2Tips" :title="l2Tips" :type="l2AlertType()" show-icon :closable="false" class="l2-tips-alert" />
 
       <section class="block">
         <h2 class="block-title">填报信息</h2>
@@ -244,16 +335,22 @@ onMounted(async () => {
           <div class="info-cell"><span class="label">竞赛名称</span><span class="value">{{ competitionName(record.competitionId) }}</span></div>
           <div class="info-cell"><span class="label">获奖范围</span><span class="value">{{ scopeName(record.awardScopeId) }}</span></div>
           <div class="info-cell"><span class="label">获奖等级</span><span class="value">{{ levelName(record.awardLevelId) }}</span></div>
-          <div class="info-cell"><span class="label">获奖日期</span><span class="value">{{ record.awardDate ? String(record.awardDate).slice(0, 10) : "-" }}</span></div>
+          <div class="info-cell"><span class="label">获奖日期</span><span class="value">{{ formatDateCn(record.awardDate) }}</span></div>
           <div class="info-cell"><span class="label">学期</span><span class="value">{{ record.semester || "-" }}</span></div>
           <div class="info-cell">
             <span class="label">归属院系</span>
-            <span class="value">{{ record.ownerDeptId != null ? (deptNameById[record.ownerDeptId] ?? `#${record.ownerDeptId}`) : "-" }}</span>
+            <span class="value">{{ record.ownerDeptId != null ? (deptNameById[record.ownerDeptId] ?? "-") : "-" }}</span>
           </div>
           <div class="info-cell"><span class="label">团队获奖人数</span><span class="value">{{ record.teamAwardCount ?? "-" }}</span></div>
           <div class="info-cell full"><span class="label">备注</span><span class="value">{{ record.remark || "-" }}</span></div>
-          <div class="info-cell"><span class="label">提交时间</span><span class="value">{{ record.submitTime || "-" }}</span></div>
-          <div class="info-cell"><span class="label">终审时间</span><span class="value">{{ record.finalAuditTime || "-" }}</span></div>
+          <div class="info-cell"><span class="label">提交时间</span><span class="value">{{ formatDateCn(record.submitTime) }}</span></div>
+          <div class="info-cell"><span class="label">终审时间</span><span class="value">{{ formatDateCn(record.finalAuditTime) }}</span></div>
+          <div class="info-cell"><span class="label">一级审核人ID</span><span class="value">{{ record.l1AuditorUserId ?? "-" }}</span></div>
+          <div class="info-cell"><span class="label">一级通过时间</span><span class="value">{{ formatDateCn(record.l1ApprovedAt) }}</span></div>
+          <div class="info-cell"><span class="label">二级复审结果</span><span class="value">{{ labelL2Result(record.l2ReviewResult) }}</span></div>
+          <div class="info-cell"><span class="label">二级复审人ID</span><span class="value">{{ record.l2ReviewerUserId ?? "-" }}</span></div>
+          <div class="info-cell"><span class="label">二级复审时间</span><span class="value">{{ formatDateCn(record.l2ReviewedAt) }}</span></div>
+          <div class="info-cell full warning-cell"><span class="label">L2 驳回原因</span><span class="value">{{ latestL2RejectReason }}</span></div>
         </div>
       </section>
 
@@ -269,7 +366,7 @@ onMounted(async () => {
             </div>
             <div class="info-cell">
               <span class="label">归属院系</span>
-              <span class="value">{{ deptNameById[team.ownerDeptId] ?? `#${team.ownerDeptId}` }}</span>
+              <span class="value">{{ deptNameById[team.ownerDeptId] ?? "-" }}</span>
             </div>
             <div class="info-cell"><span class="label">状态</span><span class="value">{{ labelTeamStatus(team.status) }}</span></div>
           </div>
@@ -326,6 +423,13 @@ onMounted(async () => {
                 <span class="time">{{ l.createdAt }}</span>
               </div>
               <div class="timeline-body">{{ labelRecordStatus(l.fromStatus) }} → {{ labelRecordStatus(l.toStatus) }}</div>
+              <div class="timeline-body">
+                <el-tag size="small" :type="stageTagType(l.auditStage)" effect="light">阶段：{{ l.auditStage || "-" }}</el-tag>
+                <span class="inline-gap">审核人工号：{{ l.auditorWorkNo || "-" }}</span>
+              </div>
+              <div class="timeline-body">
+                <el-tag size="small" type="danger" effect="plain">驳回对象：{{ labelRejectTarget(l.rejectTarget) }}</el-tag>
+              </div>
               <div v-if="l.commentText" class="timeline-comment">意见：{{ l.commentText }}</div>
             </div>
           </div>
@@ -382,12 +486,20 @@ onMounted(async () => {
   padding-bottom: 16px;
   border-bottom: 1px solid var(--el-border-color);
 }
+.title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .page-title {
   font-size: 22px;
   font-weight: 700;
   color: var(--el-text-color-primary);
   margin: 0;
   letter-spacing: -0.3px;
+}
+.l2-tips-alert {
+  margin-bottom: 14px;
 }
 .status-pill {
   flex-shrink: 0;
@@ -442,6 +554,12 @@ onMounted(async () => {
 }
 .info-cell.full {
   grid-column: 1 / -1;
+}
+.warning-cell {
+  background: var(--el-color-warning-light-9);
+  border-left: 3px solid var(--el-color-warning);
+  padding: 8px 10px;
+  border-radius: 6px;
 }
 .info-cell .label {
   font-size: 12px;
@@ -549,6 +667,9 @@ onMounted(async () => {
   font-size: 12px;
   color: var(--el-text-color-secondary);
   margin-top: 6px;
+}
+.inline-gap {
+  margin-left: 8px;
 }
 .timeline-comment {
   font-size: 12px;

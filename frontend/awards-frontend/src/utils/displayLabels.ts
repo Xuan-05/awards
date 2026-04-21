@@ -40,6 +40,7 @@ export function labelUserType(s: string | undefined | null): string {
     STUDENT: '学生',
     TEACHER: '教师',
     ADMIN: '管理员',
+    REVIEWER: '审核员',
   }
   return m[s] ?? s
 }
@@ -62,13 +63,15 @@ export function labelRoleCode(s: string | undefined | null): string {
     TEACHER: '教师',
     STUDENT: '学生',
     CAPTAIN: '队长',
+    COMP_REVIEWER_L1: '一级审核员',
+    COMP_REVIEWER_L2: '二级复审员',
   }
   return m[s] ?? s
 }
 
 export function labelAuditNodeType(s: string | undefined | null): string {
   if (s == null || s === '') return '-'
-  const m: Record<string, string> = { SCHOOL: '校级' }
+  const m: Record<string, string> = { SCHOOL: '校级', L1: '一级审核', L2: '二级复审' }
   return m[s] ?? s
 }
 
@@ -83,12 +86,12 @@ export function labelAuditActionType(s: string | undefined | null): string {
   return m[s] ?? s
 }
 
-/** 导出任务类型：DETAIL / SUMMARY */
+/** 导出任务类型 */
 export function labelExportType(s: string | undefined | null): string {
   if (s == null || s === '') return '-'
   const m: Record<string, string> = {
-    DETAIL: '明细导出',
-    SUMMARY: '汇总导出',
+    AWARD_GRADE_MATRIX: '竞赛获奖等级统计矩阵表',
+    DISCIPLINE_STATS: '学科竞赛统计导出',
   }
   return m[s] ?? s
 }

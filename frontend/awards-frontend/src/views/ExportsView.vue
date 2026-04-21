@@ -17,8 +17,17 @@ type ExportTask = {
   finishedAt?: string
 }
 
+type ExportReportOption = {
+  code: string
+  name: string
+  description?: string
+}
+
 const creating = ref(false)
 const loading = ref(false)
+const reportLoading = ref(false)
+const reportCode = ref('')
+const reportOptions = ref<ExportReportOption[]>([])
 const page = reactive({ pageNo: 1, pageSize: 20, total: 0 })
 const rows = ref<ExportTask[]>([])
 
@@ -39,6 +48,15 @@ function getStatusText(status: string) {
   }
 }
 
+function formatDateCn(input?: string) {
+  if (!input) return '-'
+  const date = new Date(input)
+  if (Number.isNaN(date.getTime())) return input
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}年${month}月${day}日`
+}
+
 async function load() {
   loading.value = true
   try {
@@ -53,16 +71,37 @@ async function load() {
   }
 }
 
+async function loadReports() {
+  reportLoading.value = true
+  try {
+    const resp = await http.get<ApiResponse<ExportReportOption[]>>('/exports/reports')
+    if (resp.data.code !== 0) throw new Error(resp.data.message)
+    reportOptions.value = resp.data.data || []
+    if (reportOptions.value.length > 0 && !reportOptions.value.some(r => r.code === reportCode.value)) {
+      reportCode.value = reportOptions.value[0].code
+    }
+  } finally {
+    reportLoading.value = false
+  }
+}
+
 // 刷新：回到第一页并重新加载
 function refresh() {
   page.pageNo = 1
   load()
 }
 
-async function createDetail() {
+async function createTask() {
+  if (!reportCode.value) {
+    ElMessage.warning('请选择报表类型')
+    return
+  }
   creating.value = true
   try {
-    const resp = await http.post<ApiResponse<number>>('/exports/detail', null)
+    const resp = await http.post<ApiResponse<number>>('/exports/tasks', {
+      reportCode: reportCode.value,
+      filters: null,
+    })
     if (resp.data.code !== 0) throw new Error(resp.data.message)
     ElMessage.success('任务已创建')
     refresh()
@@ -71,23 +110,31 @@ async function createDetail() {
   }
 }
 
-async function createSummary() {
-  creating.value = true
+async function download(id: number) {
   try {
-    const resp = await http.post<ApiResponse<number>>('/exports/summary', null)
-    if (resp.data.code !== 0) throw new Error(resp.data.message)
-    ElMessage.success('任务已创建')
-    refresh()
-  } finally {
-    creating.value = false
+    const resp = await http.get(`/exports/tasks/${id}/download`, {
+      responseType: 'blob',
+    })
+    const blob = new Blob([resp.data], { type: resp.headers['content-type'] || 'application/octet-stream' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    const contentDisposition = String(resp.headers['content-disposition'] || '')
+    const match = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i) || contentDisposition.match(/filename="?([^"]+)"?/i)
+    const fileName = match?.[1] ? decodeURIComponent(match[1]) : `export-${id}.xlsx`
+    a.href = url
+    a.download = fileName
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    window.URL.revokeObjectURL(url)
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || '下载失败'
+    ElMessage.error(msg)
   }
-}
-
-function download(id: number) {
-  window.open(`/api/exports/tasks/${id}/download`)
 }
 
 onMounted(load)
+onMounted(loadReports)
 </script>
 
 <template>
@@ -112,22 +159,18 @@ onMounted(load)
         共 {{ page.total }} 条
       </div>
       <div class="action-buttons">
-        <button class="action-btn primary" :disabled="creating" @click="createDetail">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14,2 14,8 20,8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-          </svg>
-          <span>生成明细导出</span>
-        </button>
-        <button class="action-btn primary" :disabled="creating" @click="createSummary">
+        <select v-model="reportCode" class="report-select" :disabled="creating || reportLoading">
+          <option v-for="opt in reportOptions" :key="opt.code" :value="opt.code">
+            {{ opt.name }}（{{ opt.code }}）
+          </option>
+        </select>
+        <button class="action-btn primary" :disabled="creating || reportLoading || !reportCode" @click="createTask">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
             <polyline points="17,8 12,3 7,8"/>
             <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          <span>生成汇总导出</span>
+          <span>创建导出任务</span>
         </button>
         <button class="refresh-btn" @click="refresh">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -197,8 +240,8 @@ onMounted(load)
                 <line x1="8" y1="2" x2="8" y2="6"/>
                 <line x1="3" y1="10" x2="21" y2="10"/>
               </svg>
-              <span>创建: {{ task.createdAt || '-' }}</span>
-              <span v-if="task.finishedAt" style="margin-left: 16px;">完成: {{ task.finishedAt }}</span>
+              <span>创建: {{ formatDateCn(task.createdAt) }}</span>
+              <span v-if="task.finishedAt" style="margin-left: 16px;">完成: {{ formatDateCn(task.finishedAt) }}</span>
             </div>
           </div>
         </div>
@@ -276,6 +319,17 @@ onMounted(load)
 .action-buttons {
   display: flex;
   gap: 12px;
+}
+
+.report-select {
+  height: 40px;
+  min-width: 280px;
+  border-radius: 12px;
+  border: 1px solid var(--apple-border);
+  background: #fff;
+  color: #333;
+  padding: 0 12px;
+  font-size: 13px;
 }
 
 .action-btn {

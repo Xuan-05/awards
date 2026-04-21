@@ -5,7 +5,7 @@ import { http } from '../api/http'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 type PageResult<T> = { total: number; list: T[] }
-type Row = { id: number; scopeName: string; enabled: number; sortNo: number }
+type Row = { id: number; scopeName: string; enabled: number }
 
 const loading = ref(false)
 const page = reactive({ pageNo: 1, pageSize: 20, total: 0 })
@@ -32,20 +32,17 @@ const dialogOpen = ref(false)
 const editingId = ref<number | null>(null)
 const form = reactive({
   scopeName: '',
-  sortNo: 0,
 })
 
 function openCreate() {
   editingId.value = null
   form.scopeName = ''
-  form.sortNo = 0
   dialogOpen.value = true
 }
 
 function openEdit(row: Row) {
   editingId.value = row.id
   form.scopeName = row.scopeName
-  form.sortNo = row.sortNo ?? 0
   dialogOpen.value = true
 }
 
@@ -56,7 +53,7 @@ async function save() {
   }
   const payload = {
     scopeName: form.scopeName,
-    sortNo: form.sortNo ?? 0,
+    sortNo: 0,
   }
   if (editingId.value) {
     const resp = await http.put<ApiResponse<null>>(`/dicts/award-scopes/${editingId.value}`, payload)
@@ -147,7 +144,6 @@ onMounted(() => {
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
           <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
               <el-button size="small" text @click="openEdit(row)">编辑</el-button>
@@ -172,10 +168,6 @@ onMounted(() => {
         <div class="form-item full">
           <label>获奖范围名称 <span class="required">*</span></label>
           <el-input v-model="form.scopeName" placeholder="请输入获奖范围名称" />
-        </div>
-        <div class="form-item">
-          <label>排序</label>
-          <el-input-number v-model="form.sortNo" :min="0" style="width: 100%" />
         </div>
       </div>
       <template #footer>

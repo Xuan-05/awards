@@ -19,8 +19,11 @@ public class BizAwardRecordAudit {
     private String fromStatus;
     private String toStatus;
     private String commentText;
+    private String auditStage;
     private Long auditorUserId;
+    private String auditorWorkNo;
     private Long auditorDeptId;
+    private String rejectTarget;
     private LocalDateTime createdAt;
 }
 

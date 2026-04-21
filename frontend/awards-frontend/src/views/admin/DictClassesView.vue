@@ -5,7 +5,7 @@ import { http } from '../../api/http'
 import type { ApiResponse, PageResult } from '../../types/api'
 
 type Dept = { id: number; deptCode: string; deptName: string; parentId?: number | null; enabled: number; sortNo: number }
-type ClassRow = { id: number; deptId: number; className: string; enabled: number; sortNo: number }
+type ClassRow = { id: number; deptId: number; className: string; enabled: number }
 
 const deptsLoading = ref(false)
 const depts = ref<Dept[]>([])
@@ -70,7 +70,6 @@ const editingId = ref<number | null>(null)
 const form = reactive({
   deptId: undefined as number | undefined,
   className: '',
-  sortNo: 0,
 })
 
 function openCreate() {
@@ -78,7 +77,6 @@ function openCreate() {
   editingId.value = null
   form.deptId = selectedDeptId.value
   form.className = ''
-  form.sortNo = 0
   dlgOpen.value = true
 }
 
@@ -87,7 +85,6 @@ function openEdit(row: ClassRow) {
   editingId.value = row.id
   form.deptId = row.deptId
   form.className = row.className
-  form.sortNo = row.sortNo || 0
   dlgOpen.value = true
 }
 
@@ -96,7 +93,7 @@ async function save() {
     ElMessage.error('请填写院系与班级名称')
     return
   }
-  const payload = { deptId: form.deptId, className: form.className.trim(), sortNo: form.sortNo || 0 }
+  const payload = { deptId: form.deptId, className: form.className.trim(), sortNo: 0 }
   if (dlgMode.value === 'create') {
     const resp = await http.post<ApiResponse<number>>('/admin/classes', payload)
     if (resp.data.code !== 0) throw new Error(resp.data.message)
@@ -191,15 +188,12 @@ onMounted(async () => {
           <!-- 院系 -->
           <el-table-column label="院系" width="200" align="left">
             <template #default="{ row }">
-              <span>{{ deptNameById[row.deptId] || `ID:${row.deptId}` }}</span>
+              <span>{{ deptNameById[row.deptId] || '-' }}</span>
             </template>
           </el-table-column>
 
           <!-- 班级名称 -->
           <el-table-column prop="className" label="班级名称" min-width="260" align="left" />
-
-          <!-- 排序 -->
-          <el-table-column prop="sortNo" label="排序" width="90" align="center" />
 
           <!-- 状态 -->
           <el-table-column prop="enabled" label="状态" width="100" align="center">
@@ -241,10 +235,6 @@ onMounted(async () => {
         <div class="form-item full">
           <label>班级名称 <span class="required">*</span></label>
           <el-input v-model="form.className" placeholder="请输入班级名称" />
-        </div>
-        <div class="form-item">
-          <label>排序</label>
-          <el-input-number v-model="form.sortNo" :min="0" style="width:100%" />
         </div>
       </div>
       <template #footer>

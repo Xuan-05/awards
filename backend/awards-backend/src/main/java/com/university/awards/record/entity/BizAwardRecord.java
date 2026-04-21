@@ -30,6 +30,12 @@ public class BizAwardRecord {
     private Long submitterUserId;
     private LocalDateTime submitTime;
     private LocalDateTime finalAuditTime;
+    private Long l1AuditorUserId;
+    private LocalDateTime l1ApprovedAt;
+    private Integer l2ReviewFlag;
+    private String l2ReviewResult;
+    private Long l2ReviewerUserId;
+    private LocalDateTime l2ReviewedAt;
     private String remark;
 
     @Version

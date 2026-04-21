@@ -30,6 +30,7 @@ const rows = ref<Row[]>([])
 
 const categories = ref<Category[]>([])
 const organizers = ref<Organizer[]>([])
+const expandedOrganizerIds = ref<Set<number>>(new Set())
 
 // 分类名称映射
 const catName = computed(() => {
@@ -45,6 +46,30 @@ const orgName = computed(() => {
     return id ? m.get(id) || String(id) : '-'
   }
 })
+
+function shortOrganizerName(row: Row) {
+  const full = orgName.value(row)
+  if (full === '-' || full.length <= 8 || expandedOrganizerIds.value.has(row.id)) {
+    return full
+  }
+  return `${full.slice(0, 8)}...`
+}
+
+function canToggleOrganizer(row: Row) {
+  const full = orgName.value(row)
+  return full !== '-' && full.length > 8
+}
+
+function toggleOrganizer(row: Row) {
+  if (!canToggleOrganizer(row)) return
+  const next = new Set(expandedOrganizerIds.value)
+  if (next.has(row.id)) {
+    next.delete(row.id)
+  } else {
+    next.add(row.id)
+  }
+  expandedOrganizerIds.value = next
+}
 
 // 加载分类、主办方基础数据
 async function loadBase() {
@@ -79,7 +104,7 @@ const form = reactive({
   competitionName: '',
   competitionShortName: '',
   categoryId: undefined as number | undefined,
-  organizerId: undefined as number | undefined,
+  organizerId: undefined as number | string | undefined,
   defaultLevel: '',
   sortNo: 0,
   remark: '',
@@ -116,11 +141,29 @@ async function save() {
     ElMessage.error('请把必填项补齐')
     return
   }
+  let organizerId: number | undefined
+  if (typeof form.organizerId === 'number') {
+    organizerId = form.organizerId
+  } else if (typeof form.organizerId === 'string' && form.organizerId.trim()) {
+    const name = form.organizerId.trim()
+    const existed = organizers.value.find((item) => item.organizerName === name)
+    if (existed) {
+      organizerId = existed.id
+    } else {
+      const createResp = await http.post<ApiResponse<number>>('/dicts/organizers', {
+        organizerName: name,
+        sortNo: 0,
+      })
+      if (createResp.data.code !== 0) throw new Error(createResp.data.message)
+      organizerId = createResp.data.data
+      await loadBase()
+    }
+  }
   const payload = {
     competitionName: form.competitionName,
     competitionShortName: form.competitionShortName || undefined,
     categoryId: form.categoryId,
-    organizerId: form.organizerId || undefined,
+    organizerId,
     defaultLevel: form.defaultLevel || undefined,
     sortNo: form.sortNo ?? 0,
     remark: form.remark || undefined,
@@ -240,7 +283,14 @@ onMounted(async () => {
           </el-table-column>
           <el-table-column prop="organizerId" label="主办方" width="190" align="center">
             <template #default="{ row }">
-              <span class="org-text">{{ orgName(row) }}</span>
+              <span
+                class="org-text"
+                :class="{ clickable: canToggleOrganizer(row) }"
+                :title="canToggleOrganizer(row) ? '点击显示全部/收起' : ''"
+                @click="toggleOrganizer(row)"
+              >
+                {{ shortOrganizerName(row) }}
+              </span>
             </template>
           </el-table-column>
           <el-table-column prop="defaultLevel" label="默认级别" width="110" align="center">
@@ -256,7 +306,6 @@ onMounted(async () => {
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
           <el-table-column label="操作" width="220" fixed="right" align="center">
             <template #default="{ row }">
             <el-button size="small" text @click="openEdit(row)">编辑</el-button>
@@ -294,17 +343,13 @@ onMounted(async () => {
     </div>
     <div class="form-item">
       <label>主办方</label>
-      <el-select v-model="form.organizerId" clearable style="width: 100%">
+      <el-select v-model="form.organizerId" clearable filterable allow-create default-first-option style="width: 100%">
         <el-option v-for="o in organizers" :key="o.id" :label="o.organizerName" :value="o.id" />
       </el-select>
     </div>
     <div class="form-item">
       <label>默认级别</label>
       <el-input v-model="form.defaultLevel" placeholder="如：国家级、省级" />
-    </div>
-    <div class="form-item">
-      <label>排序</label>
-      <el-input-number v-model="form.sortNo" :min="0" style="width: 100%" />
     </div>
     <div class="form-item full">
       <label>备注</label>
@@ -476,6 +521,12 @@ onMounted(async () => {
 .org-text {
   font-size: 13px;
   color: var(--apple-text-secondary);
+  word-break: break-all;
+}
+
+.org-text.clickable {
+  cursor: pointer;
+  color: var(--apple-primary);
 }
 
 .level-tag {

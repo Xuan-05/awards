@@ -37,7 +37,9 @@ public class RbacSeedRunner implements CommandLineRunner {
                 "TEACHER", "指导教师",
                 "DEPT_ADMIN", "院系管理员",
                 "SCHOOL_ADMIN", "校级管理员",
-                "SYS_ADMIN", "系统管理员");
+                "SYS_ADMIN", "系统管理员",
+                "COMP_REVIEWER_L1", "竞赛一级审核员",
+                "COMP_REVIEWER_L2", "竞赛二级复审员");
 
         // Ensure roles exist
         roleMap.forEach((code, name) -> {
@@ -50,7 +52,7 @@ public class RbacSeedRunner implements CommandLineRunner {
             }
         });
 
-        // Seed default users if absent (password: Admin123!)
+        // Seed default users if absent (password: 123456)
         seedUser("school_admin", "校级管理员", "ADMIN", dept.getId(), "SCHOOL_ADMIN");
         seedUser("dept_admin", "院系管理员", "ADMIN", dept.getId(), "DEPT_ADMIN");
         seedUser("student1", "学生1", "STUDENT", dept.getId(), null); // No global role - captain is per-team
@@ -66,7 +68,7 @@ public class RbacSeedRunner implements CommandLineRunner {
             ins.setUserType(userType);
             ins.setDeptId(deptId);
             ins.setEnabled(1);
-            ins.setPasswordHash(BCrypt.hashpw("Admin123!", BCrypt.gensalt(10)));
+            ins.setPasswordHash(BCrypt.hashpw("123456", BCrypt.gensalt(10)));
             userMapper.insert(ins);
             u = ins;
         }

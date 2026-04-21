@@ -73,6 +73,15 @@ const competitionOptions = ref<Competition[]>([])
 const teamNameMap = computed(() => new Map(teamOptions.value.map((t) => [t.id, t.teamName])))
 const competitionNameMap = computed(() => new Map(competitionOptions.value.map((c) => [c.id, c.competitionName])))
 
+function formatDateCn(input?: string) {
+  if (!input) return '-'
+  const d = new Date(input)
+  if (Number.isNaN(d.getTime())) return input
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${d.getFullYear()}年${month}月${day}日`
+}
+
 /**
  * 加载下拉选项：
  * - 团队：GET /api/teams/my
@@ -256,7 +265,7 @@ onMounted(async () => {
             </span>
           </div>
           <div class="record-footer">
-            <span class="record-time">更新于 {{ row.updatedAt || '-' }}</span>
+            <span class="record-time">更新于 {{ formatDateCn(row.updatedAt) }}</span>
             <div class="record-actions" @click.stop>
               <button 
                 v-if="row.status === 'DRAFT' || row.status === 'SCHOOL_REJECTED'"

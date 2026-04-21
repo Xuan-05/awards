@@ -47,6 +47,16 @@ const keyword = ref('')
 const list = ref<SysConfig[]>([])
 // 运行时配置（只读展示）
 const runtime = ref<RuntimeInfo | null>(null)
+const configKeyLabelMap: Record<string, string> = {
+  max_teacher_count: '团队最大指导教师数',
+  upload_max_single_file_mb: '单文件上传大小上限(MB)',
+  record_attachment_required: '提交填报前必须上传附件',
+  allow_admin_supplement_after_deadline: '截止后允许管理员补录',
+}
+
+function labelConfigKey(configKey: string) {
+  return configKeyLabelMap[configKey] || '自定义参数'
+}
 
 /**
  * 根据 keyword 对 sys_config 做前端过滤（key/remark 里包含关键字）。
@@ -191,7 +201,7 @@ onMounted(async () => {
 function formatDate(dateStr: string) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  return `${d.getFullYear()}年${String(d.getMonth() + 1).padStart(2, '0')}月${String(d.getDate()).padStart(2, '0')}日`
 }
 </script>
 
@@ -261,7 +271,8 @@ function formatDate(dateStr: string) {
             </div>
             
             <div class="setting-body">
-              <h4 class="setting-key">{{ config.configKey }}</h4>
+              <h4 class="setting-key">{{ labelConfigKey(config.configKey) }}</h4>
+              <p class="setting-key-sub">{{ config.configKey }}</p>
               <p class="setting-remark">{{ config.remark || '暂无说明' }}</p>
             </div>
             
@@ -626,6 +637,12 @@ function formatDate(dateStr: string) {
   font-size: 13px;
   font-weight: 600;
   color: var(--apple-text);
+  margin: 0 0 4px 0;
+}
+
+.setting-key-sub {
+  font-size: 11px;
+  color: var(--apple-text-tertiary);
   margin: 0 0 4px 0;
   font-family: 'SF Mono', Monaco, monospace;
 }

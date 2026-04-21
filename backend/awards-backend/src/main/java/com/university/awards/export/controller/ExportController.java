@@ -5,6 +5,8 @@ import com.university.awards.common.BizException;
 import com.university.awards.common.PageResult;
 import com.university.awards.export.entity.BizExportTask;
 import com.university.awards.export.service.ExportService;
+import com.university.awards.export.vo.CreateExportTaskRequest;
+import com.university.awards.export.vo.ExportReportOption;
 import com.university.awards.rbac.service.AuthzService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.FileSystemResource;
@@ -14,7 +16,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 /**
  * 导出任务接口（Excel 导出）。
@@ -40,28 +45,24 @@ public class ExportController {
     private final AuthzService authz;
 
     /**
-     * 创建“明细”导出任务。
-     *
-     * <p><b>权限</b>：DEPT_ADMIN/SCHOOL_ADMIN/SYS_ADMIN。</p>
-     *
-     * @param filterJson 过滤条件（JSON 字符串，允许为 null；当前实现可不传）
-     * @return 导出任务 ID
+     * 统一创建导出任务入口（推荐）。
      */
-    @PostMapping("/detail")
-    public ApiResponse<Long> createDetail(@RequestBody(required = false) String filterJson) {
+    @PostMapping("/tasks")
+    public ApiResponse<Long> createTask(@RequestBody CreateExportTaskRequest req) {
         authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN", "DEPT_ADMIN");
-        return ApiResponse.ok(exportService.createDetailExport(filterJson));
+        if (req == null || req.getReportCode() == null || req.getReportCode().isBlank()) {
+            throw new BizException(400, "reportCode 不能为空");
+        }
+        return ApiResponse.ok(exportService.createExport(req.getReportCode(), req.getFilters()));
     }
 
     /**
-     * 创建“汇总”导出任务。
-     *
-     * <p><b>权限</b>：DEPT_ADMIN/SCHOOL_ADMIN/SYS_ADMIN。</p>
+     * 查询可导出的报表类型。
      */
-    @PostMapping("/summary")
-    public ApiResponse<Long> createSummary(@RequestBody(required = false) String filterJson) {
+    @GetMapping("/reports")
+    public ApiResponse<List<ExportReportOption>> reports() {
         authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN", "DEPT_ADMIN");
-        return ApiResponse.ok(exportService.createSummaryExport(filterJson));
+        return ApiResponse.ok(exportService.listReports());
     }
 
     /**
@@ -92,17 +93,31 @@ public class ExportController {
     @GetMapping("/tasks/{id}/download")
     public ResponseEntity<FileSystemResource> download(@PathVariable Long id) {
         authz.requireAnyRole("SCHOOL_ADMIN", "SYS_ADMIN", "DEPT_ADMIN");
-        BizExportTask task = exportService.getTask(id);
-        if (!"SUCCESS".equals(task.getTaskStatus())) throw new BizException(400, "任务未成功");
-        if (task.getFilePath() == null) throw new BizException(404, "文件不存在");
+        try {
+            BizExportTask task = exportService.getTask(id);
+            if (!"SUCCESS".equals(task.getTaskStatus())) throw new BizException(400, "任务未成功");
+            if (task.getFilePath() == null) throw new BizException(404, "文件不存在");
 
-        String name = task.getFileName() == null ? ("export-" + id + ".xlsx") : task.getFileName();
-        String encoded = URLEncoder.encode(name, StandardCharsets.UTF_8);
+            Path filePath = Path.of(task.getFilePath()).normalize();
+            if (!filePath.isAbsolute()) {
+                filePath = Path.of("").toAbsolutePath().resolve(filePath).normalize();
+            }
+            if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
+                throw new BizException(404, "导出文件不存在或已被清理");
+            }
 
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(new FileSystemResource(task.getFilePath()));
+            String name = task.getFileName() == null ? ("export-" + id + ".xlsx") : task.getFileName();
+            String encoded = URLEncoder.encode(name, StandardCharsets.UTF_8);
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .body(new FileSystemResource(filePath));
+        } catch (BizException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BizException(500, "下载失败：" + e.getMessage());
+        }
     }
 }
 

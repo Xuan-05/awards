@@ -45,6 +45,11 @@ function getIcon(item: MenuItem) {
   const iconMap: Record<string, string> = {
     '控制台': 'dashboard',
     '审核管理': 'audit',
+    '一级审核台': 'audit',
+    '二级复审台': 'audit',
+    '我的竞赛权限': 'audit',
+    '竞赛填报信息': 'form',
+    '审核账号管理': 'users',
     '竞赛字典': 'competition',
     '竞赛类别库': 'category',
     '主办方库': 'organizer',

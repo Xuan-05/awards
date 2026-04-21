@@ -5,7 +5,7 @@ import { http } from '../api/http'
 
 type ApiResponse<T> = { code: number; message: string; data: T }
 type PageResult<T> = { total: number; list: T[] }
-type Row = { id: number; organizerName: string; enabled: number; sortNo: number; remark?: string }
+type Row = { id: number; organizerName: string; enabled: number; remark?: string }
 
 const loading = ref(false)
 const page = reactive({ pageNo: 1, pageSize: 20, total: 0 })
@@ -32,14 +32,12 @@ const dialogOpen = ref(false)
 const editingId = ref<number | null>(null)
 const form = reactive({
   organizerName: '',
-  sortNo: 0,
   remark: '',
 })
 
 function openCreate() {
   editingId.value = null
   form.organizerName = ''
-  form.sortNo = 0
   form.remark = ''
   dialogOpen.value = true
 }
@@ -47,7 +45,6 @@ function openCreate() {
 function openEdit(row: Row) {
   editingId.value = row.id
   form.organizerName = row.organizerName
-  form.sortNo = row.sortNo ?? 0
   form.remark = row.remark || ''
   dialogOpen.value = true
 }
@@ -59,7 +56,7 @@ async function save() {
   }
   const payload = {
     organizerName: form.organizerName,
-    sortNo: form.sortNo ?? 0,
+    sortNo: 0,
     remark: form.remark || undefined,
   }
   if (editingId.value) {
@@ -151,7 +148,6 @@ onMounted(() => {
               </span>
             </template>
           </el-table-column>
-          <el-table-column prop="sortNo" label="排序" width="100" align="center" />
           <el-table-column prop="remark" label="备注" min-width="180" align="center">
             <template #default="{ row }">
               {{ row.remark || '--' }}
@@ -181,10 +177,6 @@ onMounted(() => {
         <div class="form-item full">
           <label>主办方名称 <span class="required">*</span></label>
           <el-input v-model="form.organizerName" placeholder="主办方全称" />
-        </div>
-        <div class="form-item">
-          <label>排序</label>
-          <el-input-number v-model="form.sortNo" :min="0" style="width: 100%" />
         </div>
         <div class="form-item full">
           <label>备注</label>

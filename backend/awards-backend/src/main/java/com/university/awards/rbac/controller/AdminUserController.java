@@ -221,7 +221,7 @@ public class AdminUserController {
     }
 
     /**
-     * 重置密码（默认 Admin123!）。
+     * 重置密码（默认 123456）。
      */
     @PostMapping("/users/{id}/reset-password")
     public ApiResponse<Void> resetPassword(@PathVariable Long id) {
@@ -230,7 +230,7 @@ public class AdminUserController {
         if (u == null) throw new BizException(404, "用户不存在");
         guardTargetSysAdmin(id);
 
-        String newHash = BCrypt.hashpw("Admin123!", BCrypt.gensalt(10));
+        String newHash = BCrypt.hashpw("123456", BCrypt.gensalt(10));
         rbacService.updatePasswordHash(id, newHash);
         return ApiResponse.ok(null);
     }

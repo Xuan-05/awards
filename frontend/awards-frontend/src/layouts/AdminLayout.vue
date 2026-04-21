@@ -4,7 +4,11 @@ import AppSidebar, { type MenuItem } from '../components/layout/AppSidebar.vue'
 
 const menu: MenuItem[] = [
   { title: '控制台', path: '/admin/dashboard', roles: ['DEPT_ADMIN', 'SCHOOL_ADMIN', 'SYS_ADMIN'] },
-  { title: '审核管理', path: '/admin/audit/tasks', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
+  { title: '一级审核台', path: '/admin/audit/l1', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN', 'COMP_REVIEWER_L1'] },
+  { title: '二级复审台', path: '/admin/audit/l2', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN', 'COMP_REVIEWER_L2'] },
+  { title: '我的竞赛权限', path: '/admin/my-scopes', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN', 'COMP_REVIEWER_L1', 'COMP_REVIEWER_L2'] },
+  { title: '竞赛填报信息', path: '/admin/records/approved', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
+  { title: '审核账号管理', path: '/admin/reviewers', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
   { title: '竞赛字典', path: '/admin/dicts/competitions', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
   { title: '竞赛类别库', path: '/admin/dicts/categories', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
   { title: '主办方库', path: '/admin/dicts/organizers', roles: ['SCHOOL_ADMIN', 'SYS_ADMIN'] },
